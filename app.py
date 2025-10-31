@@ -250,7 +250,6 @@ st.markdown(header_html, unsafe_allow_html=True)
 
 # ==================== 抽獎查詢 ====================
 st.markdown('<div class="section-header"><h2>🎁 抽獎名單查詢</h2></div>', unsafe_allow_html=True)
-
 # 載入得獎名單
 def load_lottery_data():
     """從 GitHub 載入抽獎名單資料"""
@@ -326,7 +325,6 @@ st.markdown("""
 
 # ==================== 活動地圖 ====================
 st.markdown('<div class="section-header"><h2>🗺️ 活動地圖</h2></div>', unsafe_allow_html=True)
-
 # 活動地圖圖片 URL
 map_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/map.png"
 
@@ -350,3 +348,4 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
+
