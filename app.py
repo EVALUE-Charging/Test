@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 自定義CSS樣式 - 簡化版
+# 自定義CSS樣式
 css_styles = """
 <style>
     /* 隱藏側邊欄 */
@@ -206,64 +206,74 @@ st.markdown(header_html, unsafe_allow_html=True)
 # ==================== 抽獎查詢 ====================
 st.markdown('<div class="section-header"><h2>🎁 抽獎名單查詢</h2></div>', unsafe_allow_html=True)
 
-# 抽獎批次選擇
-lottery_batch = st.selectbox(
-    "選擇抽獎批次",
-    ["第一波抽獎 (12:30)", "第二波抽獎 (15:00)", "壓軸大抽獎 (16:30)"],
-    key="lottery_select"
-)
-
 # 載入得獎名單
 @st.cache_data
-def load_lottery_data(batch):
-    """載入抽獎名單資料"""
-    # 建立示例資料
-    sample_data = {
-        "抽獎編號": ["A0001", "B0234", "C0567", "D0890", "E1234"],
-        "獎項": ["iPhone 15 Pro", "充電金5000元", "充電金3000元", "充電金1000元", "精美禮品"],
-        "姓名": ["王○明", "李○華", "張○文", "陳○美", "林○志"],
-        "電話": ["0912****678", "0922****456", "0933****789", "0955****123", "0988****456"]
-    }
-    return pd.DataFrame(sample_data)
+def load_lottery_data():
+    """從 GitHub 載入抽獎名單資料"""
+    try:
+        # 請將此 URL 替換為您的 GitHub raw 檔案連結
+        # 格式：https://raw.githubusercontent.com/使用者名稱/專案名稱/分支名稱/檔案路徑
+        github_url = "YOUR_GITHUB_RAW_URL_HERE"
+        
+        # 讀取 CSV 檔案（假設是 CSV 格式）
+        df = pd.read_csv(github_url)
+        
+        # 確保欄位名稱正確
+        if "獎項" in df.columns and "序號" in df.columns:
+            return df[["獎項", "序號"]]
+        else:
+            st.error("檔案格式錯誤：需包含「獎項」和「序號」欄位")
+            return pd.DataFrame(columns=["獎項", "序號"])
+            
+    except Exception as e:
+        st.error(f"載入資料失敗：{str(e)}")
+        # 返回示例資料以供測試
+        sample_data = {
+            "獎項": ["iPhone 15 Pro", "充電金5000元", "充電金3000元", "充電金1000元", "精美禮品"],
+            "序號": ["A0001", "B0234", "C0567", "D0890", "E1234"]
+        }
+        return pd.DataFrame(sample_data)
 
 # 搜尋功能
 col1, col2 = st.columns([3, 1])
 with col1:
     search_number = st.text_input(
-        "🔍 搜尋抽獎編號",
-        placeholder="請輸入您的抽獎編號 (例：A0001)",
+        "🔍 搜尋抽獎序號",
+        placeholder="請輸入您的抽獎序號 (例：A0001)",
         key="search_input"
     )
 with col2:
     search_button = st.button("查詢", type="primary", use_container_width=True, key="search_btn")
 
-# 載入並顯示資料
-df = load_lottery_data(lottery_batch)
+# 載入資料
+df = load_lottery_data()
 
+# 搜尋結果
 if search_button and search_number:
-    result = df[df["抽獎編號"] == search_number.upper()]
+    result = df[df["序號"].astype(str).str.upper() == search_number.upper()]
     if not result.empty:
         st.success(f"🎉 恭喜！您中獎了！")
         st.markdown(f"""
         <div class="highlight-box">
             <h3>中獎資訊</h3>
-            <p><strong>抽獎編號：</strong>{result.iloc[0]['抽獎編號']}</p>
+            <p><strong>抽獎序號：</strong>{result.iloc[0]['序號']}</p>
             <p><strong>獎項：</strong>{result.iloc[0]['獎項']}</p>
-            <p><strong>姓名：</strong>{result.iloc[0]['姓名']}</p>
             <p><strong>領獎地點：</strong>服務台</p>
         </div>
         """, unsafe_allow_html=True)
     else:
-        st.error("😢 很抱歉，此編號未中獎或輸入錯誤")
+        st.error("😢 很抱歉，此序號未中獎或輸入錯誤")
 
 # 顯示完整名單
-with st.expander(f"📋 查看 {lottery_batch} 完整得獎名單"):
+with st.expander("📋 查看完整得獎名單"):
     if not df.empty:
         st.dataframe(
             df,
             use_container_width=True,
             hide_index=True
         )
+    else:
+        st.warning("目前尚無得獎名單資料")
 
 # 領獎須知
 st.markdown("""
