@@ -324,6 +324,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ==================== 活動地圖 ====================
+st.markdown('<div class="section-header"><h2>🗺️ 活動地圖</h2></div>', unsafe_allow_html=True)
+
+# 活動地圖圖片 URL
+map_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/map.png"
+
+st.markdown(f"""
+<div style="text-align: center; margin: 2rem 0;">
+    <img src="{map_url}" alt="活動地圖" style="max-width: 100%; height: auto; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+</div>
+""", unsafe_allow_html=True)
+
 # ==================== 頁尾 ====================
 st.markdown("---")
 st.markdown('<div class="decoration">🎈 🎪 🎯 🎨 🎭 🎪 🎈</div>', unsafe_allow_html=True)
