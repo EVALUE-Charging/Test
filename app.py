@@ -46,7 +46,7 @@ css_styles = """
     /* 主標題樣式 */
     .main-header {
         background: linear-gradient(135deg, #E85D75 0%, #F3722C 25%, #FDB143 50%, #43AA8B 75%, #277DA1 100%) !important;
-        padding: 2rem 1rem;
+        padding: 1.5rem 1rem;
         border-radius: 15px;
         color: white !important;
         text-align: center;
@@ -200,7 +200,7 @@ css_styles = """
         }
         
         .main-header {
-            padding: 1.5rem 0.8rem;
+            padding: 1rem 0.8rem;
         }
         
         .main-header h1 {
@@ -222,7 +222,7 @@ css_styles = """
         }
         
         .top-left-logo img {
-            height: 20px;
+            height: 35px;
         }
     }
 </style>
@@ -338,6 +338,7 @@ st.markdown("""
         <li>請攜帶抽獎券存根及身分證件至服務台領獎</li>
         <li>領獎時間：活動當日 10:00 - 17:00</li>
         <li>逾時未領取視同放棄得獎資格</li>
+        <li>🔢 序號格式：請輸入純數字（如：12345）</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -365,6 +366,3 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
-
-
-
