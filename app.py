@@ -275,7 +275,7 @@ col1, col2 = st.columns([3, 1])
 with col1:
     search_number = st.text_input(
         "🔍 搜尋抽獎序號",
-        placeholder="請輸入您的抽獎序號 (例：A0001)",
+        placeholder="請輸入您的抽獎序號",
         key="search_input"
     )
 with col2:
@@ -345,6 +345,7 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
+
 
 
 
