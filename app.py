@@ -164,6 +164,23 @@ css_styles = """
         margin: 1rem 0;
     }
     
+    /* Logo 左上角 */
+    .top-left-logo {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 9999;
+        background: white;
+        padding: 0.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .top-left-logo img {
+        height: 50px;
+        display: block;
+    }
+    
     /* 響應式設計 */
     @media (max-width: 768px) {
         .main .block-container {
@@ -186,19 +203,32 @@ css_styles = """
             padding: 0.5rem 1rem !important;
             font-size: 0.9rem !important;
         }
+        
+        .top-left-logo {
+            top: 0.5rem;
+            left: 0.5rem;
+        }
+        
+        .top-left-logo img {
+            height: 40px;
+        }
     }
 </style>
 """
 
 st.markdown(css_styles, unsafe_allow_html=True)
 
-# ==================== 主標題 ====================
-# Logo 圖片 URL
+# ==================== 左上角 Logo ====================
 logo_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/logo.png"
+st.markdown(f"""
+<div class="top-left-logo">
+    <img src="{logo_url}" alt="EVALUE Logo">
+</div>
+""", unsafe_allow_html=True)
 
-header_html = f"""
+# ==================== 主標題 ====================
+header_html = """
 <div class="main-header">
-    <img src="{logo_url}" alt="EVALUE Logo" style="height: 60px; margin-bottom: 1rem;">
     <h1>🎪 2025 EVALUE Day 嘉年華 🎪</h1>
     <p><strong>歡樂充電・綠能同行</strong></p>
     <p>📅 11月29日(六) 10:00-17:00</p>
