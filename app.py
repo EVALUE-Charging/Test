@@ -252,7 +252,6 @@ if search_button and search_number:
             <h3>中獎資訊</h3>
             <p><strong>抽獎序號：</strong>{result.iloc[0]['序號']}</p>
             <p><strong>獎項：</strong>{result.iloc[0]['獎項']}</p>
-            <p><strong>領獎地點：</strong>服務台</p>
         </div>
         """, unsafe_allow_html=True)
     else:
