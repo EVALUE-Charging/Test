@@ -211,11 +211,8 @@ st.markdown('<div class="section-header"><h2>🎁 抽獎名單查詢</h2></div>'
 def load_lottery_data():
     """從 GitHub 載入抽獎名單資料"""
     try:
-        # ========== 請在下方填入您的 GitHub Raw URL ==========
-        # 格式：https://raw.githubusercontent.com/你的帳號/專案名稱/main/winners.csv
-        # 例如：https://raw.githubusercontent.com/evalue-team/lottery-2025/main/winners.csv
-        github_url = "請填入您的GitHub檔案網址"
-        # ===================================================
+        # GitHub Raw URL
+        github_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/winners.csv"
         
         # 讀取 CSV 檔案
         df = pd.read_csv(github_url, encoding='utf-8')
