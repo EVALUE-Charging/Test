@@ -226,12 +226,7 @@ def load_lottery_data():
             
     except Exception as e:
         st.error(f"載入資料失敗：{str(e)}")
-        # 返回示例資料以供測試
-        sample_data = {
-            "獎項": ["iPhone 15 Pro", "充電金5000元", "充電金3000元", "充電金1000元", "精美禮品"],
-            "序號": ["A0001", "B0234", "C0567", "D0890", "E1234"]
-        }
-        return pd.DataFrame(sample_data)
+        return pd.DataFrame(columns=["獎項", "序號"])
 
 # 搜尋功能
 col1, col2 = st.columns([3, 1])
