@@ -195,7 +195,7 @@ st.markdown(css_styles, unsafe_allow_html=True)
 # ==================== 主標題 ====================
 header_html = """
 <div class="main-header">
-    <h1>🎪 2025 EVALUE Day 嘉年華 🎪</h1>
+    <h1>🎪 2025 EVALUE Day 嘉年華</h1>
     <p><strong>歡樂充電・綠能同行</strong></p>
     <p>📅 11月29日(六) 10:00-17:00</p>
     <p>📍 苗栗西湖渡假村 幸福廣場</p>
@@ -294,3 +294,4 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
+
