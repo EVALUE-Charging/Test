@@ -328,7 +328,7 @@ st.markdown('<div class="section-header"><h2>🗺️ 活動地圖</h2></div>', u
 map_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/map.png"
 
 st.markdown(f"""
-<div style="text-align: center; margin: 0.8rem 0;">
+<div style="text-align: center; margin: 0.1rem 0;">
     <img src="{map_url}" alt="活動地圖" style="max-width: 100%; height: auto; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
 </div>
 """, unsafe_allow_html=True)
@@ -345,6 +345,7 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
+
 
 
 
