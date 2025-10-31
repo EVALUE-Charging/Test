@@ -17,6 +17,16 @@ css_styles = """
         display: none;
     }
     
+    /* 隱藏 Streamlit 頂部工具列 */
+    header[data-testid="stHeader"] {
+        display: none;
+    }
+    
+    /* 調整主容器頂部距離 */
+    .main {
+        padding-top: 0 !important;
+    }
+    
     /* 背景樣式 */
     .stApp {
         background: linear-gradient(180deg, #fef9f3 0%, #fdf4e8 100%) !important;
