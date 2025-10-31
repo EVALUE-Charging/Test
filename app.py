@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 
 # 設定頁面配置
 st.set_page_config(
@@ -249,6 +250,7 @@ st.markdown(header_html, unsafe_allow_html=True)
 
 # ==================== 抽獎查詢 ====================
 st.markdown('<div class="section-header"><h2>🎁 抽獎名單查詢</h2></div>', unsafe_allow_html=True)
+
 # 載入得獎名單
 def load_lottery_data():
     """從 GitHub 載入抽獎名單資料"""
@@ -270,14 +272,25 @@ def load_lottery_data():
         st.error(f"載入資料失敗：{str(e)}")
         return pd.DataFrame(columns=["獎項", "序號"])
 
+# 驗證輸入只包含數字的函數
+def is_valid_number(value):
+    """檢查輸入值是否只包含數字"""
+    return bool(re.match("^[0-9]+$", value.strip()))
+
 # 搜尋功能
 col1, col2 = st.columns([3, 1])
 with col1:
     search_number = st.text_input(
         "🔍 搜尋抽獎序號",
-        placeholder="請輸入您的抽獎序號",
+        placeholder="請輸入數字序號 (例：12345)",
         key="search_input"
     )
+    
+    # 即時驗證輸入
+    if search_number:
+        if not is_valid_number(search_number):
+            st.warning("⚠️ 請只輸入數字，不可包含英文字母或特殊符號")
+
 with col2:
     search_button = st.button("查詢", type="primary", use_container_width=True, key="search_btn")
 
@@ -286,18 +299,25 @@ df = load_lottery_data()
 
 # 搜尋結果
 if search_button and search_number:
-    result = df[df["序號"].astype(str).str.upper() == search_number.upper()]
-    if not result.empty:
-        st.success(f"🎉 恭喜！您中獎了！")
-        st.markdown(f"""
-        <div class="highlight-box">
-            <h3>中獎資訊</h3>
-            <p><strong>抽獎序號：</strong>{result.iloc[0]['序號']}</p>
-            <p><strong>獎項：</strong>{result.iloc[0]['獎項']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # 驗證輸入格式
+    if not is_valid_number(search_number):
+        st.error("❌ 序號格式錯誤！請只輸入數字")
     else:
-        st.error("😢 很抱歉，此序號未中獎或輸入錯誤")
+        # 進行搜尋
+        result = df[df["序號"].astype(str) == search_number.strip()]
+        if not result.empty:
+            st.success(f"🎉 恭喜！您中獎了！")
+            st.markdown(f"""
+            <div class="highlight-box">
+                <h3>中獎資訊</h3>
+                <p><strong>抽獎序號：</strong>{result.iloc[0]['序號']}</p>
+                <p><strong>獎項：</strong>{result.iloc[0]['獎項']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.error("😢 很抱歉，此序號未中獎或序號不存在")
+elif search_button and not search_number:
+    st.warning("請輸入抽獎序號")
 
 # 顯示完整名單
 with st.expander("📋 查看完整得獎名單"):
@@ -318,6 +338,7 @@ st.markdown("""
         <li>請攜帶抽獎券存根及身分證件至服務台領獎</li>
         <li>領獎時間：活動當日 10:00 - 17:00</li>
         <li>逾時未領取視同放棄得獎資格</li>
+        <li>🔢 序號格式：請輸入純數字（如：12345）</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -345,8 +366,3 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
-
-
-
-
-
