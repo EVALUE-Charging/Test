@@ -77,7 +77,7 @@ css_styles = """
     /* 區塊標題 */
     .section-header {
         background: linear-gradient(90deg, rgba(67, 170, 139, 0.1), rgba(39, 125, 161, 0.1));
-        padding: 1rem;
+        padding: 0.8rem;
         border-radius: 10px;
         margin: 2rem 0 1rem 0;
         border-left: 4px solid #43AA8B;
@@ -338,6 +338,7 @@ st.markdown("""
         <li>請攜帶抽獎券存根及身分證件至服務台領獎</li>
         <li>領獎時間：活動當日 10:00 - 17:00</li>
         <li>逾時未領取視同放棄得獎資格</li>
+        <li>🔢 序號格式：請輸入純數字（如：12345）</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -365,4 +366,3 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
-
