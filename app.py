@@ -169,16 +169,17 @@ css_styles = """
         position: fixed;
         top: 1rem;
         left: 1rem;
-        z-index: 9999;
+        z-index: 999999 !important;
         background: white;
         padding: 0.5rem;
         border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     }
     
     .top-left-logo img {
         height: 50px;
         display: block;
+        max-width: 150px;
     }
     
     /* 響應式設計 */
