@@ -195,7 +195,8 @@ st.markdown(css_styles, unsafe_allow_html=True)
 # ==================== 主標題 ====================
 header_html = """
 <div class="main-header">
-    <h1>🎪 2025 EVALUE Day 嘉年華</h1>
+    <h1>🎪 2025 EVALUE Day 嘉年華 🎪</h1>
+    <p><strong>歡樂充電・綠能同行</strong></p>
     <p>📅 11月29日(六) 10:00-17:00</p>
     <p>📍 苗栗西湖渡假村 幸福廣場</p>
 </div>
@@ -206,7 +207,6 @@ st.markdown(header_html, unsafe_allow_html=True)
 st.markdown('<div class="section-header"><h2>🎁 抽獎名單查詢</h2></div>', unsafe_allow_html=True)
 
 # 載入得獎名單
-@st.cache_data
 def load_lottery_data():
     """從 GitHub 載入抽獎名單資料"""
     try:
@@ -285,11 +285,11 @@ st.markdown('<div class="decoration">🎈 🎪 🎯 🎨 🎭 🎪 🎈</div>', 
 
 footer_html = """
 <div style="text-align: center; padding: 2rem 1rem; color: #666;">
-    <p>© 2025 EVALUE 充電嘉年華 🌱</p>
+    <p>© 2025 EVALUE 充電嘉年華 | 綠能永續・共創未來 🌱</p>
     <p style="font-size: 0.9rem;">主辦單位：EVALUE 華城電能</p>
+    <p style="font-size: 0.85rem; margin-top: 1rem;">
+        📧 event@evalue.com.tw | ☎️ 0800-000-000
+    </p>
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
-
-
-
