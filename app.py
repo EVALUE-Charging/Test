@@ -193,8 +193,12 @@ css_styles = """
 st.markdown(css_styles, unsafe_allow_html=True)
 
 # ==================== 主標題 ====================
-header_html = """
+# Logo 圖片 URL
+logo_url = "https://raw.githubusercontent.com/EVALUE-Charging/Test/main/logo.png"
+
+header_html = f"""
 <div class="main-header">
+    <img src="{logo_url}" alt="EVALUE Logo" style="height: 60px; margin-bottom: 1rem;">
     <h1>🎪 2025 EVALUE Day 嘉年華 🎪</h1>
     <p><strong>歡樂充電・綠能同行</strong></p>
     <p>📅 11月29日(六) 10:00-17:00</p>
