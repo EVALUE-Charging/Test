@@ -222,7 +222,7 @@ css_styles = """
         }
         
         .top-left-logo img {
-            height: 35px;
+            height: 30px;
         }
     }
 </style>
@@ -366,3 +366,4 @@ footer_html = """
 </div>
 """
 st.markdown(footer_html, unsafe_allow_html=True)
+
