@@ -241,7 +241,7 @@ def get_theme_css(theme):
     
     .stButton > button:hover {{
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba({colors['primary'].replace('#', '').replace('primary', '30, 144, 255')}, 0.4);
+        box-shadow: 0 4px 12px rgba(30, 144, 255, 0.4);
     }}
     
     .stApp.dark-mode .stButton > button {{
@@ -409,7 +409,7 @@ def get_theme_css(theme):
     .stTextInput > div > div > input:focus,
     .stNumberInput > div > div > input:focus {{
         border-color: {colors['primary']} !important;
-        box-shadow: 0 0 0 2px rgba({colors['primary'].replace('#', '').replace('primary', '30, 144, 255')}, 0.2) !important;
+        box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2) !important;
     }}
     
     /* 選擇框標籤 - 適配深色模式 */
@@ -485,6 +485,30 @@ def get_theme_css(theme):
     /* 展開器內容 - 適配深色模式 */
     .stApp.dark-mode .streamlit-expanderContent {{
         background-color: #1E1E1E !important;
+        border-color: #404040 !important;
+    }}
+    
+    /* 滑桿標籤和數值 - 適配深色模式 */
+    .stApp.dark-mode .stSlider > label {{
+        color: #E0E0E0 !important;
+    }}
+    
+    .stApp.dark-mode [data-testid="stTickBarMin"],
+    .stApp.dark-mode [data-testid="stTickBarMax"] {{
+        color: #B0B0B0 !important;
+    }}
+    
+    /* 主題選擇器下拉選單 - 適配深色模式 */
+    .stApp.dark-mode .stSelectbox [data-baseweb="select"] {{
+        background-color: #2D2D2D !important;
+        color: #E0E0E0 !important;
+        border-color: #404040 !important;
+    }}
+    
+    /* 數字輸入框按鈕 - 適配深色模式 */
+    .stApp.dark-mode .stNumberInput > div > div > button {{
+        background-color: #404040 !important;
+        color: #E0E0E0 !important;
         border-color: #404040 !important;
     }}
 </style>
@@ -986,11 +1010,705 @@ def main():
     else:
         st.session_state.current_tab = "平均稼動率"
     
-    # 其餘功能保持原樣...
-    # (為了節省篇幅，這裡省略了原本的功能代碼，實際使用時請保留原本的所有功能)
+    # 初始化側邊欄變數
+    manual_lat = 25.057138899151003
+    manual_lon = 121.6144309671576
+    search_radius = 5.0
+    ac_capacity = st.session_state.ac_capacity
+    dc_capacity = st.session_state.dc_capacity
+    selected_area = '全部'
+    selected_location = '全部'
+    search_button = False
     
-    st.info("🌙 此版本已優化深色模式支援，會自動偵測您的系統主題設定！")
-    st.success("✨ 現在在深色模式下，所有文字和元件都能清楚顯示了！")
+    # 側邊欄內容 - 只在拓點評估時顯示
+    if st.session_state.current_tab == "拓點評估":
+        with st.sidebar:
+            st.header("🔍 設定評估條件")
+            st.info("💡 從 Google Maps 右鍵複製座標")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                manual_lat = st.number_input("緯度", min_value=21.0, max_value=26.0, value=25.057138899151003, format="%.4f")
+            with col2:
+                manual_lon = st.number_input("經度", min_value=120.0, max_value=122.5, value=121.6144309671576, format="%.4f")
+            
+            search_radius = st.slider("搜尋半徑 (km)", min_value=0.1, max_value=10.0, value=5.0, step=0.1)
+            
+            st.markdown("---")
+            st.markdown("### 🎯 每次充電度數參數設定")
+            
+            param_col1, param_col2 = st.columns(2)
+            with param_col1:
+                ac_capacity = st.number_input(
+                    "AC 槍每次最大電量 (度/次)",
+                    min_value=1,
+                    max_value=99,
+                    value=st.session_state.ac_capacity,
+                    step=1,
+                    help="AC 充電槍每次充電的最大電量，用於計算稼動率",
+                    key="ac_cap_sidebar"
+                )
+            with param_col2:
+                dc_capacity = st.number_input(
+                    "DC 槍每次最大電量 (度/次)",
+                    min_value=1,
+                    max_value=99,
+                    value=st.session_state.dc_capacity,
+                    step=1,
+                    help="DC 充電槍每次充電的最大電量，用於計算稼動率",
+                    key="dc_cap_sidebar"
+                )
+            
+            st.markdown("---")
+            st.markdown("### 🎯 進階篩選條件")
+            
+            if 'area_type' in stations_df.columns:
+                area_types = ['全部'] + sorted(stations_df['area_type'].dropna().unique().tolist())
+                selected_area = st.selectbox("區域屬性", options=area_types)
+            else:
+                selected_area = '全部'
+            
+            if 'location_type' in stations_df.columns:
+                location_types = ['全部'] + sorted(stations_df['location_type'].dropna().unique().tolist())
+                selected_location = st.selectbox("站點屬性", options=location_types)
+            else:
+                selected_location = '全部'
+            
+            st.markdown("---")
+            search_button = st.button("🔍 開始評估", type="primary", use_container_width=True)
+    else:
+        # 平均稼動率分頁 - 側邊欄顯示簡單訊息
+        with st.sidebar:
+            st.info("📊 請在主頁面設定篩選條件")
+    
+    # ===== 分頁1: 拓點評估 =====
+    if st.session_state.current_tab == "拓點評估":
+        if search_button:
+            if manual_lat is None or manual_lon is None:
+                st.warning("⚠️ 請輸入經緯度座標")
+            else:
+                # 保存充電度數參數到 session_state
+                st.session_state.ac_capacity = ac_capacity
+                st.session_state.dc_capacity = dc_capacity
+                
+                # 重新計算稼動率（使用新參數）
+                if not usage_df.empty:
+                    utilization_df = calculate_utilization_rate(
+                        stations_df, 
+                        usage_df, 
+                        ac_capacity,
+                        dc_capacity
+                    )
+                
+                st.session_state.search_executed = True
+                st.session_state.search_lat = manual_lat
+                st.session_state.search_lon = manual_lon
+                st.session_state.search_radius = search_radius
+                st.session_state.selected_area = selected_area
+                st.session_state.selected_location = selected_location
+        
+        if st.session_state.get('search_executed', False):
+            lat = st.session_state.search_lat
+            lon = st.session_state.search_lon
+            search_radius = st.session_state.search_radius
+            selected_area = st.session_state.get('selected_area', '全部')
+            selected_location = st.session_state.get('selected_location', '全部')
+            
+            with st.spinner("🔄 正在分析地點..."):
+                nearby = find_nearby_stations(lat, lon, stations_df, search_radius)
+                
+                if selected_area != '全部' and 'area_type' in nearby.columns:
+                    nearby = nearby[nearby['area_type'] == selected_area]
+                if selected_location != '全部' and 'location_type' in nearby.columns:
+                    nearby = nearby[nearby['location_type'] == selected_location]
+                
+                st.session_state.nearby_stations = nearby
+            
+            st.subheader(f"📊 評估結果")
+            st.caption(f"座標：{lat:.4f}, {lon:.4f} | 搜尋半徑：{search_radius} km")
+            st.caption(f"⚙️ 計算參數：AC={st.session_state.ac_capacity}度/次 | DC={st.session_state.dc_capacity}度/次")
+            
+            metric_col1, metric_col2, metric_col3 = st.columns(3)
+            
+            with metric_col1:
+                total_stations = len(nearby)
+                st.metric("附近站點數", total_stations, help="搜尋半徑內的站點數量")
+            
+            with metric_col2:
+                if 'ac_count' in nearby.columns:
+                    total_ac = int(nearby['ac_count'].sum()) if len(nearby) > 0 else 0
+                    st.metric("AC 槍數", total_ac, delta="慢充", delta_color="off")
+            
+            with metric_col3:
+                if 'dc_count' in nearby.columns:
+                    total_dc = int(nearby['dc_count'].sum()) if len(nearby) > 0 else 0
+                    st.metric("DC 槍數", total_dc, delta="快充", delta_color="off")
+            
+            st.markdown("---")
+            
+            if not utilization_df.empty and len(nearby) > 0:
+                st.subheader("📈 區域稼動率表現")
+                
+                nearby_stations = nearby['station_id'].tolist()
+                nearby_util = utilization_df[utilization_df['Station'].isin(nearby_stations)]
+                
+                if not nearby_util.empty:
+                    latest_quarter = nearby_util['Quarter'].max()
+                    latest_data = nearby_util[nearby_util['Quarter'] == latest_quarter]
+                    
+                    gauge_col1, gauge_col2, gauge_col3 = st.columns(3)
+                    
+                    with gauge_col1:
+                        st.markdown(f"**最新季度：{latest_quarter}**")
+                    
+                    with gauge_col2:
+                        ac_util = latest_data[latest_data['ChargerType'] == 'AC']['utilization_rate'].dropna()
+                        if len(ac_util) > 0:
+                            render_utilization_gauge(ac_util.mean(), "AC 稼動率", "#87CEEB")
+                    
+                    with gauge_col3:
+                        dc_util = latest_data[latest_data['ChargerType'] == 'DC']['utilization_rate'].dropna()
+                        if len(dc_util) > 0:
+                            render_utilization_gauge(dc_util.mean(), "DC 稼動率", "#20B2AA")
+            
+            st.markdown("---")
+            
+            map_col, station_col = st.columns([1, 1])
+            
+            with map_col:
+                st.subheader("🗺️ 地圖視圖")
+                target_address = f"座標: ({lat:.4f}, {lon:.4f})"
+                map_obj = create_map(lat, lon, nearby, target_address, search_radius)
+                folium_static(map_obj, width=600, height=500)
+            
+            with station_col:
+                st.subheader("🔍 單站詳細資訊")
+                
+                if len(nearby) > 0:
+                    station_options = {f"{row['name']} ({row['station_id']})": row['station_id'] 
+                                      for _, row in nearby.iterrows()}
+                    
+                    selected_display = st.selectbox(
+                        "選擇站點查看詳情",
+                        options=["請選擇站點..."] + list(station_options.keys()),
+                        key="single_station"
+                    )
+                    
+                    if selected_display != "請選擇站點...":
+                        selected_id = station_options[selected_display]
+                        station_info = nearby[nearby['station_id'] == selected_id].iloc[0]
+                        
+                        st.markdown(f"### {station_info['name']}")
+                        
+                        info_col1, info_col2 = st.columns(2)
+                        with info_col1:
+                            st.markdown(f"**站點 ID**  \n`{station_info['station_id']}`")
+                            st.markdown(f"**距離**  \n🚗 {station_info['distance_km']:.2f} km")
+                        with info_col2:
+                            if 'ac_count' in station_info:
+                                st.markdown(f"**AC 槍數**  \n⚡ {int(station_info['ac_count'])}")
+                            if 'dc_count' in station_info:
+                                st.markdown(f"**DC 槍數**  \n⚡ {int(station_info['dc_count'])}")
+                        
+                        if not utilization_df.empty:
+                            station_util = utilization_df[utilization_df['Station'] == selected_id]
+                            
+                            if not station_util.empty:
+                                st.markdown("#### 📊 稼動率歷史")
+                                
+                                quarterly_single = calculate_quarterly_utilization(
+                                    utilization_df, 
+                                    [selected_id],
+                                    st.session_state.ac_capacity,
+                                    st.session_state.dc_capacity
+                                )
+                                
+                                if not quarterly_single.empty:
+                                    display_df = quarterly_single[['Quarter']].copy()
+                                    if 'AC' in quarterly_single.columns:
+                                        display_df['AC稼動率'] = quarterly_single['AC']
+                                    if 'DC' in quarterly_single.columns:
+                                        display_df['DC稼動率'] = quarterly_single['DC']
+                                    
+                                    st.dataframe(display_df, use_container_width=True, hide_index=True, height=250)
+                else:
+                    st.info("此範圍內無站點")
+            
+            if not utilization_df.empty and len(nearby) > 0:
+                with st.expander("📈 查看區域歷季趨勢詳細資料"):
+                    quarterly_df = calculate_quarterly_utilization(
+                        utilization_df, 
+                        nearby_stations,
+                        st.session_state.ac_capacity,
+                        st.session_state.dc_capacity
+                    )
+                    
+                    if not quarterly_df.empty:
+                        fig = go.Figure()
+                        
+                        if 'AC' in quarterly_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=quarterly_df['Quarter'],
+                                y=quarterly_df['AC'],
+                                mode='lines+markers',
+                                name='AC稼動率',
+                                line=dict(color=THEMES[st.session_state.current_theme]['accent1'], width=3),
+                                marker=dict(size=8)
+                            ))
+                        
+                        if 'DC' in quarterly_df.columns:
+                            fig.add_trace(go.Scatter(
+                                x=quarterly_df['Quarter'],
+                                y=quarterly_df['DC'],
+                                mode='lines+markers',
+                                name='DC稼動率',
+                                line=dict(color=THEMES[st.session_state.current_theme]['accent2'], width=3),
+                                marker=dict(size=8)
+                            ))
+                        
+                        fig.update_layout(
+                            title='區域稼動率季度趨勢',
+                            xaxis_title='季度',
+                            yaxis_title='稼動率',
+                            height=400,
+                            hovermode='x unified',
+                            plot_bgcolor='white',
+                            paper_bgcolor='#F5F5F5'
+                        )
+                        
+                        st.plotly_chart(fig, use_container_width=True)
+                        
+                        st.markdown("#### 📋 數據表格")
+                        
+                        display_df = quarterly_df.copy()
+                        display_df['Year'] = display_df['Quarter'].str[:4]
+                        
+                        html_table = '<table style="width:100%; border-collapse: collapse; text-align: center; background: white; border-radius: 8px; overflow: hidden;">'
+                        html_table += '<thead><tr style="background: linear-gradient(135deg, ' + THEMES[st.session_state.current_theme]['primary'] + ' 0%, ' + THEMES[st.session_state.current_theme]['secondary'] + ' 100%); color: white; font-weight: bold;">'
+                        html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">季度</th>'
+                        
+                        if 'AC' in display_df.columns:
+                            html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">AC稼動率</th>'
+                            html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">AC年成長率</th>'
+                        if 'DC' in display_df.columns:
+                            html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">DC稼動率</th>'
+                            html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">DC年成長率</th>'
+                        
+                        html_table += '</tr></thead><tbody>'
+                        
+                        year_counts = display_df['Year'].value_counts().sort_index()
+                        year_first_occurrence = {}
+                        
+                        for idx, row in display_df.iterrows():
+                            year = row['Year']
+                            
+                            if year not in year_first_occurrence:
+                                year_first_occurrence[year] = True
+                                is_first = True
+                            else:
+                                is_first = False
+                            
+                            html_table += '<tr style="border: 1px solid #E0E0E0;">'
+                            html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333;">{row["Quarter"]}</td>'
+                            
+                            if 'AC' in row:
+                                ac_value = row['AC']
+                                html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333; font-weight: 600;">{ac_value:.2f}</td>'
+                                
+                                if is_first and 'AC年成長率' in row:
+                                    ac_growth = row['AC年成長率']
+                                    rowspan = year_counts[year]
+                                    
+                                    if pd.notna(ac_growth) and ac_growth != 0:
+                                        color = '#32CD32' if ac_growth > 0 else '#FF4500'
+                                        growth_text = f"{ac_growth:+.1f}%"
+                                    else:
+                                        color = '#AAAAAA'
+                                        growth_text = '-'
+                                    
+                                    html_table += f'<td rowspan="{rowspan}" style="padding: 10px; border: 1px solid #E0E0E0; background-color: #F5F5F5; color: {color}; font-weight: bold; vertical-align: middle;">{growth_text}</td>'
+                            
+                            if 'DC' in row:
+                                dc_value = row['DC']
+                                html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333; font-weight: 600;">{dc_value:.2f}</td>'
+                                
+                                if is_first and 'DC年成長率' in row:
+                                    dc_growth = row['DC年成長率']
+                                    rowspan = year_counts[year]
+                                    
+                                    if pd.notna(dc_growth) and dc_growth != 0:
+                                        color = '#32CD32' if dc_growth > 0 else '#FF4500'
+                                        growth_text = f"{dc_growth:+.1f}%"
+                                    else:
+                                        color = '#AAAAAA'
+                                        growth_text = '-'
+                                    
+                                    html_table += f'<td rowspan="{rowspan}" style="padding: 10px; border: 1px solid #E0E0E0; background-color: #F5F5F5; color: {color}; font-weight: bold; vertical-align: middle;">{growth_text}</td>'
+                            
+                            html_table += '</tr>'
+                        
+                        html_table += '</tbody></table>'
+                        st.markdown(html_table, unsafe_allow_html=True)
+        else:
+            st.info("👈 請在側邊欄設定評估條件並點擊「開始評估」")
+            
+            stat_col1, stat_col2, stat_col3 = st.columns(3)
+            with stat_col1:
+                st.metric("系統總站點數", len(stations_df))
+            with stat_col2:
+                st.metric("系統總充電槍數", int(stations_df['charger_count'].sum()))
+            with stat_col3:
+                if 'ac_count' in stations_df.columns and 'dc_count' in stations_df.columns:
+                    total_ac = int(stations_df['ac_count'].sum())
+                    total_dc = int(stations_df['dc_count'].sum())
+                    st.metric("AC / DC 比例", f"{total_ac} / {total_dc}")
+    
+    # ===== 分頁2: 平均稼動率 =====
+    elif st.session_state.current_tab == "平均稼動率":
+        # 先檢查是否需要重新計算稼動率
+        if not usage_df.empty:
+            utilization_df = calculate_utilization_rate(
+                stations_df, 
+                usage_df, 
+                st.session_state.ac_capacity,
+                st.session_state.dc_capacity
+            )
+        
+        if utilization_df.empty:
+            st.warning("⚠️ 無稼動率資料")
+            return
+        
+        st.subheader("🎯 每次充電度數參數設定")
+        
+        param_col1, param_col2, param_col3 = st.columns([2, 2, 1])
+        with param_col1:
+            ac_capacity_tab2 = st.number_input(
+                "AC 槍每次最大電量 (度/次)",
+                min_value=1,
+                max_value=99,
+                value=st.session_state.ac_capacity,
+                step=1,
+                help="AC 充電槍每次充電的最大電量，用於計算稼動率",
+                key="ac_capacity_tab2"
+            )
+        with param_col2:
+            dc_capacity_tab2 = st.number_input(
+                "DC 槍每次最大電量 (度/次)",
+                min_value=1,
+                max_value=99,
+                value=st.session_state.dc_capacity,
+                step=1,
+                help="DC 充電槍每次充電的最大電量，用於計算稼動率",
+                key="dc_capacity_tab2"
+            )
+        with param_col3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🔄 更新參數", type="primary", use_container_width=True, key="update_params_tab2"):
+                st.session_state.ac_capacity = ac_capacity_tab2
+                st.session_state.dc_capacity = dc_capacity_tab2
+                st.success("✅ 參數已更新")
+                st.rerun()
+        
+        st.markdown("---")
+        
+        st.subheader("🎯 通路篩選條件")
+        
+        filter_row1 = st.columns([3, 3])
+        
+        with filter_row1[0]:
+            if 'area_type' in stations_df.columns:
+                area_types_all = ['全部'] + sorted(stations_df['area_type'].dropna().unique().tolist())
+                filter_area = st.selectbox("區域屬性", options=area_types_all, key="filter_area")
+            else:
+                filter_area = '全部'
+        
+        with filter_row1[1]:
+            if 'location_type' in stations_df.columns:
+                location_types_all = ['全部'] + sorted(stations_df['location_type'].dropna().unique().tolist())
+                filter_location = st.selectbox("站點屬性", options=location_types_all, key="filter_location")
+            else:
+                filter_location = '全部'
+        
+        st.markdown("---")
+        
+        st.subheader("🎯 單站篩選條件")
+        
+        station_name_search = st.text_input(
+            "🔍 單站搜尋（選填）",
+            placeholder="輸入站點名稱關鍵字快速找站...",
+            key="station_name_search",
+            help="模糊搜尋站點名稱，找到後可在下方選擇單站查看"
+        )
+        
+        if station_name_search and station_name_search.strip():
+            st.markdown("---")
+            
+            search_results = stations_df[
+                stations_df['name'].str.contains(station_name_search.strip(), case=False, na=False)
+            ]
+            
+            if len(search_results) > 0:
+                st.markdown(f"**找到 {len(search_results)} 個站點**，請選擇要查看的單站：")
+                
+                station_options = {
+                    f"{row['name']} ({row['station_id']})": row['station_id'] 
+                    for _, row in search_results.iterrows()
+                }
+                
+                selected_station_display = st.selectbox(
+                    "選擇站點",
+                    options=["請選擇站點..."] + list(station_options.keys()),
+                    key="selected_single_station"
+                )
+                
+                if selected_station_display != "請選擇站點...":
+                    selected_station_id = station_options[selected_station_display]
+                    filtered_stations = stations_df[stations_df['station_id'] == selected_station_id]
+                    st.success(f"✅ 已選擇單站：{selected_station_display}")
+                else:
+                    filtered_stations = stations_df.copy()
+                    
+                    if filter_area != '全部' and 'area_type' in filtered_stations.columns:
+                        filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
+                    if filter_location != '全部' and 'location_type' in filtered_stations.columns:
+                        filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+            else:
+                st.warning(f"⚠️ 找不到包含「{station_name_search}」的站點")
+                filtered_stations = stations_df.copy()
+                
+                if filter_area != '全部' and 'area_type' in filtered_stations.columns:
+                    filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
+                if filter_location != '全部' and 'location_type' in filtered_stations.columns:
+                    filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+        else:
+            filtered_stations = stations_df.copy()
+            
+            if filter_area != '全部' and 'area_type' in filtered_stations.columns:
+                filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
+            if filter_location != '全部' and 'location_type' in filtered_stations.columns:
+                filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+        
+        filtered_station_ids = filtered_stations['station_id'].tolist()
+        
+        if len(filtered_station_ids) == 0:
+            st.warning("⚠️ 沒有符合篩選條件的站點")
+            return
+        
+        quarterly_data = calculate_quarterly_utilization(
+            utilization_df, 
+            filtered_station_ids,
+            st.session_state.ac_capacity,
+            st.session_state.dc_capacity
+        )
+        
+        if quarterly_data.empty:
+            st.info("📊 篩選條件下無稼動率資料")
+            return
+        
+        st.markdown("---")
+        
+        latest_quarter = quarterly_data.iloc[-1]
+        
+        kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
+        
+        with kpi_col1:
+            st.metric("篩選站點數", len(filtered_stations), help="符合篩選條件的站點總數")
+        
+        with kpi_col2:
+            total_chargers = int(filtered_stations['charger_count'].sum())
+            st.metric("充電槍總數", total_chargers)
+        
+        with kpi_col3:
+            if 'AC' in latest_quarter:
+                ac_growth = latest_quarter.get('AC年成長率', 0)
+                growth_text = f"{ac_growth:+.1f}%" if pd.notna(ac_growth) and ac_growth != 0 else None
+                st.metric(
+                    f"AC稼動率 ({latest_quarter['Quarter']})",
+                    f"{latest_quarter['AC']:.2f}",
+                    delta=growth_text,
+                    help="年度平均成長率"
+                )
+        
+        with kpi_col4:
+            if 'DC' in latest_quarter:
+                dc_growth = latest_quarter.get('DC年成長率', 0)
+                growth_text = f"{dc_growth:+.1f}%" if pd.notna(dc_growth) and dc_growth != 0 else None
+                st.metric(
+                    f"DC稼動率 ({latest_quarter['Quarter']})",
+                    f"{latest_quarter['DC']:.2f}",
+                    delta=growth_text,
+                    help="年度平均成長率"
+                )
+        
+        st.markdown("---")
+        st.caption(f"⚙️ 計算參數：AC={st.session_state.ac_capacity}度/次 | DC={st.session_state.dc_capacity}度/次")
+        st.markdown("---")
+        
+        st.subheader("📊 稼動率趨勢分析")
+        
+        fig = go.Figure()
+        
+        if 'AC' in quarterly_data.columns:
+            fig.add_trace(go.Scatter(
+                x=quarterly_data['Quarter'],
+                y=quarterly_data['AC'],
+                mode='lines+markers+text',
+                name='AC稼動率',
+                line=dict(color=THEMES[st.session_state.current_theme]['accent1'], width=3),
+                marker=dict(size=10, symbol='circle'),
+                text=[f"{val:.2f}" for val in quarterly_data['AC']],
+                textposition='top center',
+                textfont=dict(size=10, color='#333333'),
+                hovertemplate='<b>AC稼動率</b><br>季度: %{x}<br>稼動率: %{y:.2f}<extra></extra>'
+            ))
+        
+        if 'DC' in quarterly_data.columns:
+            fig.add_trace(go.Scatter(
+                x=quarterly_data['Quarter'],
+                y=quarterly_data['DC'],
+                mode='lines+markers+text',
+                name='DC稼動率',
+                line=dict(color=THEMES[st.session_state.current_theme]['accent2'], width=3),
+                marker=dict(size=10, symbol='square'),
+                text=[f"{val:.2f}" for val in quarterly_data['DC']],
+                textposition='bottom center',
+                textfont=dict(size=10, color='#333333'),
+                hovertemplate='<b>DC稼動率</b><br>季度: %{x}<br>稼動率: %{y:.2f}<extra></extra>'
+            ))
+        
+        fig.update_layout(
+            height=500,
+            hovermode='x unified',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5
+            ),
+            xaxis=dict(title='季度'),
+            yaxis=dict(title='稼動率'),
+            plot_bgcolor='white',
+            paper_bgcolor='#F5F5F5',
+            font=dict(color='#333333')
+        )
+        
+        fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#E0E0E0')
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E0E0E0')
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        with st.expander("📋 查看詳細數據表格", expanded=False):
+            display_data = quarterly_data.copy()
+            display_data['Year'] = display_data['Quarter'].str[:4]
+            
+            html_table = '<table style="width:100%; border-collapse: collapse; text-align: center; background: white; border-radius: 8px; overflow: hidden;">'
+            html_table += '<thead><tr style="background: linear-gradient(135deg, ' + THEMES[st.session_state.current_theme]['primary'] + ' 0%, ' + THEMES[st.session_state.current_theme]['secondary'] + ' 100%); color: white; font-weight: bold;">'
+            html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">季度</th>'
+            
+            if 'AC' in display_data.columns:
+                html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">AC稼動率</th>'
+                html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">AC年成長率</th>'
+            if 'DC' in display_data.columns:
+                html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">DC稼動率</th>'
+                html_table += '<th style="padding: 12px; border: 1px solid #E0E0E0;">DC年成長率</th>'
+            
+            html_table += '</tr></thead><tbody>'
+            
+            year_counts = display_data['Year'].value_counts().sort_index()
+            year_first_occurrence = {}
+            
+            for idx, row in display_data.iterrows():
+                year = row['Year']
+                
+                if year not in year_first_occurrence:
+                    year_first_occurrence[year] = True
+                    is_first = True
+                else:
+                    is_first = False
+                
+                html_table += '<tr style="border: 1px solid #E0E0E0;">'
+                html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333;">{row["Quarter"]}</td>'
+                
+                if 'AC' in row:
+                    ac_value = row['AC']
+                    html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333; font-weight: 600;">{ac_value:.2f}</td>'
+                    
+                    if is_first and 'AC年成長率' in row:
+                        ac_growth = row['AC年成長率']
+                        rowspan = year_counts[year]
+                        
+                        if pd.notna(ac_growth) and ac_growth != 0:
+                            color = '#32CD32' if ac_growth > 0 else '#FF4500'
+                            growth_text = f"{ac_growth:+.1f}%"
+                        else:
+                            color = '#AAAAAA'
+                            growth_text = '-'
+                        
+                        html_table += f'<td rowspan="{rowspan}" style="padding: 10px; border: 1px solid #E0E0E0; background-color: #F5F5F5; color: {color}; font-weight: bold; vertical-align: middle;">{growth_text}</td>'
+                
+                if 'DC' in row:
+                    dc_value = row['DC']
+                    html_table += f'<td style="padding: 10px; border: 1px solid #E0E0E0; color: #333333; font-weight: 600;">{dc_value:.2f}</td>'
+                    
+                    if is_first and 'DC年成長率' in row:
+                        dc_growth = row['DC年成長率']
+                        rowspan = year_counts[year]
+                        
+                        if pd.notna(dc_growth) and dc_growth != 0:
+                            color = '#32CD32' if dc_growth > 0 else '#FF4500'
+                            growth_text = f"{dc_growth:+.1f}%"
+                        else:
+                            color = '#AAAAAA'
+                            growth_text = '-'
+                        
+                        html_table += f'<td rowspan="{rowspan}" style="padding: 10px; border: 1px solid #E0E0E0; background-color: #F5F5F5; color: {color}; font-weight: bold; vertical-align: middle;">{growth_text}</td>'
+                
+                html_table += '</tr>'
+            
+            html_table += '</tbody></table>'
+            st.markdown(html_table, unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            download_data = display_data.copy()
+            
+            if 'AC年成長率' in download_data.columns:
+                download_data['AC年成長率'] = download_data['AC年成長率'].apply(
+                    lambda x: f"{x:+.1f}%" if pd.notna(x) and x != 0 else "-"
+                )
+            if 'DC年成長率' in download_data.columns:
+                download_data['DC年成長率'] = download_data['DC年成長率'].apply(
+                    lambda x: f"{x:+.1f}%" if pd.notna(x) and x != 0 else "-"
+                )
+            
+            rename_map = {
+                'Quarter': '季度',
+                'AC': 'AC稼動率',
+                'DC': 'DC稼動率',
+                'Year': '年份'
+            }
+            download_data = download_data.rename(columns=rename_map)
+            
+            export_cols = ['季度']
+            if 'AC稼動率' in download_data.columns:
+                export_cols.append('AC稼動率')
+            if 'AC年成長率' in download_data.columns:
+                export_cols.append('AC年成長率')
+            if 'DC稼動率' in download_data.columns:
+                export_cols.append('DC稼動率')
+            if 'DC年成長率' in download_data.columns:
+                export_cols.append('DC年成長率')
+            
+            download_data = download_data[export_cols]
+            
+            csv = download_data.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 下載數據 (CSV)",
+                data=csv,
+                file_name=f"稼動率分析_{filter_area}_{filter_location}.csv",
+                mime="text/csv"
+            )
 
 if __name__ == "__main__":
     main()
