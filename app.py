@@ -124,6 +124,21 @@ def get_theme_css(theme):
 {get_dark_mode_detection_css()}
 
 <style>
+    /* 深色模式檢測後的強制白色背景規則 */
+    .stApp.dark-mode .main {{
+        background-color: white !important;
+    }}
+    
+    .stApp.dark-mode .main .block-container {{
+        background-color: white !important;
+        color: #333333 !important;
+        border-radius: 0px !important;
+        padding: 2rem !important;
+        margin: 0px auto !important;
+        box-shadow: none !important;
+        border: none !important;
+    }}
+    
     /* 全局樣式 - 根據模式調整 */
     .stApp {{
         transition: background-color 0.3s ease, color 0.3s ease;
@@ -137,20 +152,10 @@ def get_theme_css(theme):
         color: #333333;
     }}
     
-    /* 深色模式 - 主要內容區域保持白色背景 */
+    /* 深色模式 - 只有最外層是深色，內容保持白色 */
     .stApp.dark-mode {{
         background: linear-gradient(135deg, #2C2C2C 0%, #1E1E1E 100%);
         color: #333333;
-    }}
-    
-    /* 深色模式下的主要內容容器 - 保持白色背景 */
-    .stApp.dark-mode .main .block-container {{
-        background-color: white;
-        border-radius: 12px;
-        padding: 2rem;
-        margin: 1rem auto;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(0, 0, 0, 0.1);
     }}
     
     /* 主標題樣式 - 適配深色模式 */
@@ -161,6 +166,7 @@ def get_theme_css(theme):
     }}
     
     .stApp.dark-mode h1 {{
+        color: {colors['primary']} !important;
         text-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }}
     
@@ -178,6 +184,36 @@ def get_theme_css(theme):
     .stApp.dark-mode h2, 
     .stApp.dark-mode h3 {{
         color: #333333 !important;
+    }}
+    
+    /* 深色模式下強制主內容區域和所有子元素為白色背景 */
+    .stApp.dark-mode .main .block-container,
+    .stApp.dark-mode .main .block-container > div,
+    .stApp.dark-mode .main .block-container .element-container,
+    .stApp.dark-mode .main .block-container .stMarkdown,
+    .stApp.dark-mode .main .block-container .stAlert,
+    .stApp.dark-mode .main .block-container .stExpander {{
+        background-color: white !important;
+    }}
+    
+    /* 深色模式下確保所有文字保持深色 */
+    .stApp.dark-mode .main .block-container p,
+    .stApp.dark-mode .main .block-container span,
+    .stApp.dark-mode .main .block-container div {{
+        color: #333333 !important;
+    }}
+    
+    /* 深色模式全域白色背景強制規則 */
+    .stApp.dark-mode .main .block-container [class*="element-container"],
+    .stApp.dark-mode .main .block-container [data-testid*="column"],
+    .stApp.dark-mode .main .block-container .row-widget,
+    .stApp.dark-mode .main .block-container .stHorizontal {{
+        background-color: white !important;
+    }}
+    
+    /* 深色模式下強制 Radio 按鈕區域為白色 */
+    .stApp.dark-mode .stRadio {{
+        background-color: white !important;
     }}
     
     /* 側邊欄樣式 */
@@ -202,29 +238,41 @@ def get_theme_css(theme):
         font-weight: 600 !important;
     }}
     
-    /* 指標卡片 - 深色模式也保持白色背景 */
+    /* 指標卡片 - 深色模式強制白色背景 */
     [data-testid="stMetric"] {{
         padding: 1.5rem;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         border-left: 4px solid {colors['primary']};
         transition: box-shadow 0.3s ease;
+        background: white !important;
     }}
     
     .stApp.light-mode [data-testid="stMetric"] {{
-        background: white;
+        background: white !important;
     }}
     
     .stApp.dark-mode [data-testid="stMetric"] {{
-        background: white;
+        background: white !important;
         box-shadow: 0 4px 16px rgba(0,0,0,0.2);
         border: 1px solid rgba(0, 0, 0, 0.1);
+    }}
+    
+    /* 強制指標卡片內容為深色文字 */
+    .stApp.dark-mode [data-testid="stMetric"] * {{
+        background: transparent !important;
     }}
     
     [data-testid="stMetricLabel"] {{
         font-size: 0.9rem !important;
         font-weight: 500 !important;
         color: #888888 !important;
+    }}
+    
+    [data-testid="stMetricValue"] {{
+        color: {colors['primary']} !important;
+        font-size: 2rem !important;
+        font-weight: 700 !important;
     }}
     
     .stApp.light-mode [data-testid="stMetricLabel"] {{
