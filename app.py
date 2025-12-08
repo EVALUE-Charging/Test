@@ -14,39 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ==================== 深色模式檢測和主題配色定義 ====================
-def get_dark_mode_detection_css():
-    """添加深色模式檢測的 CSS"""
-    return """
-    <script>
-    // 檢測深色模式
-    function detectDarkMode() {
-        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const streamlitElement = document.querySelector('.stApp');
-        if (isDarkMode) {
-            streamlitElement.classList.add('dark-mode');
-        } else {
-            streamlitElement.classList.add('light-mode');
-        }
-        
-        // 監聽深色模式變化
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-                streamlitElement.classList.toggle('dark-mode', e.matches);
-                streamlitElement.classList.toggle('light-mode', !e.matches);
-            });
-        }
-    }
-    
-    // 頁面載入時執行檢測
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', detectDarkMode);
-    } else {
-        detectDarkMode();
-    }
-    </script>
-    """
-
+# ==================== 統一主題配色定義 ====================
 THEMES = {
     "經典藍": {
         "primary": "#1E90FF",
@@ -117,170 +85,73 @@ THEMES = {
 }
 
 def get_theme_css(theme):
-    """根據選擇的主題生成對應的 CSS，支援深色模式"""
+    """根據選擇的主題生成統一的 CSS，強制覆蓋系統模式"""
     colors = THEMES[theme]
     
     return f"""
-{get_dark_mode_detection_css()}
-
 <style>
-    /* 深色模式檢測後的強制白色背景規則 */
-    .stApp.dark-mode .main {{
-        background-color: white !important;
-    }}
-    
-    .stApp.dark-mode .main .block-container {{
-        background-color: white !important;
+    /* 強制統一樣式 - 不受系統深色/淺色模式影響 */
+    .stApp,
+    .stApp * {{
+        background-color: #F5F5F5 !important;
         color: #333333 !important;
-        border-radius: 0px !important;
-        padding: 2rem !important;
-        margin: 0px auto !important;
-        box-shadow: none !important;
-        border: none !important;
     }}
     
-    /* 全局樣式 - 根據模式調整 */
-    .stApp {{
-        transition: background-color 0.3s ease, color 0.3s ease;
-        min-height: 100vh;
-        position: relative;
-    }}
-    
-    /* 淺色模式 */
-    .stApp.light-mode {{
-        background-color: #F5F5F5;
-        color: #333333;
-    }}
-    
-    /* 深色模式 - 只有最外層是深色，內容保持白色 */
-    .stApp.dark-mode {{
-        background: linear-gradient(135deg, #2C2C2C 0%, #1E1E1E 100%);
-        color: #333333;
-    }}
-    
-    /* 主標題樣式 - 適配深色模式 */
-    .stApp h1 {{
+    /* 主標題樣式 */
+    h1 {{
         color: {colors['primary']} !important;
         font-weight: 700 !important;
         text-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }}
     
-    .stApp.dark-mode h1 {{
-        color: {colors['primary']} !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    }}
-    
-    .stApp h2, .stApp h3 {{
+    h2, h3 {{
+        color: #333333 !important;
         font-weight: 600 !important;
-        color: #333333 !important;
-        transition: none;
-    }}
-    
-    .stApp.light-mode h2, 
-    .stApp.light-mode h3 {{
-        color: #333333 !important;
-    }}
-    
-    .stApp.dark-mode h2, 
-    .stApp.dark-mode h3 {{
-        color: #333333 !important;
-    }}
-    
-    /* 深色模式下強制主內容區域和所有子元素為白色背景 */
-    .stApp.dark-mode .main .block-container,
-    .stApp.dark-mode .main .block-container > div,
-    .stApp.dark-mode .main .block-container .element-container,
-    .stApp.dark-mode .main .block-container .stMarkdown,
-    .stApp.dark-mode .main .block-container .stAlert,
-    .stApp.dark-mode .main .block-container .stExpander {{
-        background-color: white !important;
-    }}
-    
-    /* 深色模式下確保所有文字保持深色 */
-    .stApp.dark-mode .main .block-container p,
-    .stApp.dark-mode .main .block-container span,
-    .stApp.dark-mode .main .block-container div {{
-        color: #333333 !important;
-    }}
-    
-    /* 深色模式全域白色背景強制規則 */
-    .stApp.dark-mode .main .block-container [class*="element-container"],
-    .stApp.dark-mode .main .block-container [data-testid*="column"],
-    .stApp.dark-mode .main .block-container .row-widget,
-    .stApp.dark-mode .main .block-container .stHorizontal {{
-        background-color: white !important;
-    }}
-    
-    /* 深色模式下強制 Radio 按鈕區域為白色 */
-    .stApp.dark-mode .stRadio {{
-        background-color: white !important;
     }}
     
     /* 側邊欄樣式 */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, {colors['primary']} 0%, {colors['secondary']} 100%);
+        background: linear-gradient(180deg, {colors['primary']} 0%, {colors['secondary']} 100%) !important;
     }}
     
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h3 {{
+        color: white !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }}
+    
     [data-testid="stSidebar"] label,
     [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] .stMarkdown,
-    [data-testid="stSidebar"] [data-testid="stWidgetLabel"],
-    [data-testid="stSidebar"] [data-testid="stTickBarMin"],
-    [data-testid="stSidebar"] [data-testid="stTickBarMax"] {{
+    [data-testid="stSidebar"] .stMarkdown {{
         color: white !important;
-        text-shadow: 0px 1px 2px rgba(0,0,0,0.3);
+        text-shadow: 0px 1px 2px rgba(0,0,0,0.2);
     }}
     
     [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {{
+        color: white !important;
         font-weight: 600 !important;
+        text-shadow: 0px 1px 2px rgba(0,0,0,0.2);
     }}
     
-    /* 指標卡片 - 深色模式強制白色背景 */
+    [data-testid="stSidebar"] [data-testid="stTickBarMin"],
+    [data-testid="stSidebar"] [data-testid="stTickBarMax"] {{
+        color: white !important;
+    }}
+    
+    /* 指標卡片 */
     [data-testid="stMetric"] {{
+        background: white !important;
         padding: 1.5rem;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         border-left: 4px solid {colors['primary']};
-        transition: box-shadow 0.3s ease;
-        background: white !important;
-    }}
-    
-    .stApp.light-mode [data-testid="stMetric"] {{
-        background: white !important;
-    }}
-    
-    .stApp.dark-mode [data-testid="stMetric"] {{
-        background: white !important;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }}
-    
-    /* 強制指標卡片內容為深色文字 */
-    .stApp.dark-mode [data-testid="stMetric"] * {{
-        background: transparent !important;
     }}
     
     [data-testid="stMetricLabel"] {{
+        color: #AAAAAA !important;
         font-size: 0.9rem !important;
         font-weight: 500 !important;
-        color: #888888 !important;
-    }}
-    
-    [data-testid="stMetricValue"] {{
-        color: {colors['primary']} !important;
-        font-size: 2rem !important;
-        font-weight: 700 !important;
-    }}
-    
-    .stApp.light-mode [data-testid="stMetricLabel"] {{
-        color: #888888 !important;
-    }}
-    
-    .stApp.dark-mode [data-testid="stMetricLabel"] {{
-        color: #888888 !important;
     }}
     
     [data-testid="stMetricValue"] {{
@@ -291,14 +162,13 @@ def get_theme_css(theme):
     
     /* 按鈕樣式 */
     .stButton > button {{
-        background: linear-gradient(135deg, {colors['primary']} 0%, {colors['secondary']} 100%);
-        color: white;
-        border: none;
+        background: linear-gradient(135deg, {colors['primary']} 0%, {colors['secondary']} 100%) !important;
+        color: white !important;
+        border: none !important;
         border-radius: 8px;
         padding: 0.6rem 1.5rem;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }}
     
     .stButton > button:hover {{
@@ -306,46 +176,20 @@ def get_theme_css(theme):
         box-shadow: 0 4px 12px rgba(30, 144, 255, 0.4);
     }}
     
-    .stApp.dark-mode .stButton > button {{
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }}
-    
-    /* 分頁樣式 - 深色模式也保持淺色外觀 */
+    /* 分頁樣式 */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
+        background-color: white !important;
         padding: 0.5rem;
         border-radius: 10px;
-        background-color: white;
-        transition: box-shadow 0.3s ease;
-    }}
-    
-    .stApp.light-mode .stTabs [data-baseweb="tab-list"] {{
-        background-color: white;
-    }}
-    
-    .stApp.dark-mode .stTabs [data-baseweb="tab-list"] {{
-        background-color: white;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(0, 0, 0, 0.1);
     }}
     
     .stTabs [data-baseweb="tab"] {{
+        background-color: #F5F5F5 !important;
         border-radius: 8px;
+        color: #333333 !important;
         font-weight: 600;
         padding: 0.5rem 1.5rem;
-        transition: all 0.3s ease;
-        background-color: #F5F5F5;
-        color: #333333;
-    }}
-    
-    .stApp.light-mode .stTabs [data-baseweb="tab"] {{
-        background-color: #F5F5F5;
-        color: #333333;
-    }}
-    
-    .stApp.dark-mode .stTabs [data-baseweb="tab"] {{
-        background-color: #F5F5F5;
-        color: #333333;
     }}
     
     .stTabs [aria-selected="true"] {{
@@ -353,45 +197,40 @@ def get_theme_css(theme):
         color: white !important;
     }}
     
-    /* 自定義指標卡片 - 深色模式也保持白色背景 */
-    .metric-card, .metric-card-success, .metric-card-warning, .metric-card-danger {{
+    /* 自定義指標卡片 */
+    .metric-card {{
+        background: white !important;
         padding: 2rem;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         text-align: center;
-        transition: box-shadow 0.3s ease;
-        background: white;
-    }}
-    
-    .stApp.light-mode .metric-card,
-    .stApp.light-mode .metric-card-success,
-    .stApp.light-mode .metric-card-warning,
-    .stApp.light-mode .metric-card-danger {{
-        background: white;
-    }}
-    
-    .stApp.dark-mode .metric-card,
-    .stApp.dark-mode .metric-card-success,
-    .stApp.dark-mode .metric-card-warning,
-    .stApp.dark-mode .metric-card-danger {{
-        background: white;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }}
-    
-    .metric-card {{
         border-top: 4px solid {colors['primary']};
     }}
     
     .metric-card-success {{
+        background: white !important;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        text-align: center;
         border-top: 4px solid {colors['success']};
     }}
     
     .metric-card-warning {{
+        background: white !important;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        text-align: center;
         border-top: 4px solid {colors['warning']};
     }}
     
     .metric-card-danger {{
+        background: white !important;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        text-align: center;
         border-top: 4px solid {colors['danger']};
     }}
     
@@ -399,396 +238,171 @@ def get_theme_css(theme):
         font-size: 2.5rem;
         font-weight: 700;
         margin: 0.5rem 0;
+        color: #333333 !important;
     }}
     
     .metric-label {{
         font-size: 0.95rem;
+        color: #AAAAAA !important;
         margin-bottom: 0.5rem;
         font-weight: 500;
-        color: #888888;
     }}
     
-    .stApp.light-mode .metric-label {{
-        color: #888888;
-    }}
-    
-    .stApp.dark-mode .metric-label {{
-        color: #888888;
-    }}
-    
-    /* 警告框 - 深色模式也保持白色背景 */
+    /* 警告框 */
     .stAlert {{
+        background-color: white !important;
+        color: #333333 !important;
         border-radius: 10px;
         border-left: 4px solid {colors['primary']};
-        background-color: white;
-        transition: box-shadow 0.3s ease;
     }}
     
-    .stApp.dark-mode .stAlert {{
-        background-color: white !important;
-        color: #333333 !important;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }}
-    
-    /* 展開器 - 深色模式也保持白色背景 */
+    /* 展開器 */
     .streamlit-expanderHeader {{
+        background-color: white !important;
         border-radius: 8px;
         font-weight: 600;
-        background-color: white;
-        color: #333333;
-        transition: box-shadow 0.3s ease;
+        color: #333333 !important;
     }}
     
-    .stApp.light-mode .streamlit-expanderHeader {{
-        background-color: white;
-        color: #333333;
-    }}
-    
-    .stApp.dark-mode .streamlit-expanderHeader {{
-        background-color: white;
-        color: #333333;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(0, 0, 0, 0.1);
-    }}
-    
-    /* 輸入框 - 深色模式保持白色背景 */
+    /* 輸入框 */
     .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div {{
-        border-radius: 8px;
-        border: 2px solid #E0E0E0;
-        transition: all 0.3s ease;
-        background-color: white;
-        color: #333333;
-    }}
-    
-    .stApp.light-mode .stTextInput > div > div > input,
-    .stApp.light-mode .stNumberInput > div > div > input {{
-        background-color: white;
-        color: #333333;
-    }}
-    
-    .stApp.dark-mode .stTextInput > div > div > input,
-    .stApp.dark-mode .stNumberInput > div > div > input {{
+    .stNumberInput > div > div > input {{
         background-color: white !important;
         color: #333333 !important;
-        border-color: #C0C0C0 !important;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    .stApp.light-mode .stSelectbox > div > div {{
-        background-color: white;
-    }}
-    
-    .stApp.dark-mode .stSelectbox > div > div {{
-        background-color: white;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-        border: 1px solid #C0C0C0;
+        border-radius: 8px;
+        border: 2px solid #E0E0E0 !important;
     }}
     
     .stTextInput > div > div > input:focus,
     .stNumberInput > div > div > input:focus {{
         border-color: {colors['primary']} !important;
-        box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2) !important;
+        box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.1) !important;
     }}
     
-    /* 選擇框標籤 - 深色模式保持深色文字 */
+    /* 選擇框 */
+    .stSelectbox > div > div {{
+        background-color: white !important;
+        border-radius: 8px;
+    }}
+    
+    /* 選擇框標籤 */
     .stSelectbox > label,
     .stTextInput > label,
     .stNumberInput > label {{
         color: #333333 !important;
     }}
     
-    .stApp.light-mode .stSelectbox > label,
-    .stApp.light-mode .stTextInput > label,
-    .stApp.light-mode .stNumberInput > label {{
-        color: #333333 !important;
-    }}
-    
-    .stApp.dark-mode .stSelectbox > label,
-    .stApp.dark-mode .stTextInput > label,
-    .stApp.dark-mode .stNumberInput > label {{
-        color: #333333 !important;
-    }}
-    
-    /* 滑桿 - 適配深色模式 */
-    .stSlider > div > div > div > div {{
-        background-color: {colors['primary']} !important;
-    }}
-    
     /* 登出按鈕 */
     .logout-button > button {{
-        background: linear-gradient(135deg, {colors['danger']} 0%, {colors['warning']} 100%);
-        color: white;
+        background: linear-gradient(135deg, {colors['danger']} 0%, {colors['warning']} 100%) !important;
+        color: white !important;
         border: none;
         border-radius: 8px;
         padding: 0.5rem 1.2rem;
         font-weight: 600;
     }}
     
-    /* Radio 按鈕 - 深色模式保持淺色外觀 */
+    /* 主題選擇 Radio 樣式 */
     .stRadio > div > label > div > p {{
         color: #333333 !important;
     }}
     
-    .stApp.light-mode .stRadio > div > label > div > p {{
-        color: #333333 !important;
-    }}
-    
-    .stApp.dark-mode .stRadio > div > label > div > p {{
-        color: #333333 !important;
-    }}
-    
-    /* 深色模式下 Radio 按鈕背景保持白色 */
-    .stApp.dark-mode .stRadio > div {{
-        background-color: white;
+    /* 數據框 */
+    .dataframe {{
         border-radius: 8px;
-        padding: 0.8rem;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    /* 深色模式下選中的 Radio 按鈕 */
-    .stApp.dark-mode .stRadio [data-baseweb="radio"] [data-checked="true"] {{
-        background-color: {colors['primary']} !important;
-        border-color: {colors['primary']} !important;
-    }}
-    
-    /* 側邊欄滑桿優化 */
-    [data-testid="stSidebar"] .stSlider > div > div > div > div {{
-        background-color: {colors['accent1']} !important;
-    }}
-    
-    [data-testid="stSidebar"] .stSlider [data-baseweb="slider"] [role="slider"] {{
-        background-color: white !important;
-    }}
-    
-    /* 深色模式按鈕 hover 效果優化 */
-    .stApp.dark-mode .stButton > button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-    }}
-    
-    /* 深色模式表單標籤對比度優化 */
-    .stApp.dark-mode .stForm {{
-        background-color: white;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    /* 數據框 - 深色模式也保持白色背景 */
-    .stApp.dark-mode .stDataFrame {{
-        background-color: white;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    .stApp.dark-mode .stDataFrame [data-testid="stTable"] {{
-        background-color: white;
-    }}
-    
-    /* 成功/資訊/警告/錯誤訊息 - 深色模式保持原色彩但背景為白 */
-    .stApp.dark-mode .stSuccess,
-    .stApp.dark-mode .stInfo,
-    .stApp.dark-mode .stWarning,
-    .stApp.dark-mode .stError {{
-        background-color: white !important;
-        color: #333333 !important;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    /* Caption 文字 - 深色模式保持灰色 */
-    .stApp.dark-mode .stCaption {{
-        color: #666666 !important;
-    }}
-    
-    /* 展開器內容 - 深色模式保持白色背景 */
-    .stApp.dark-mode .streamlit-expanderContent {{
-        background-color: white !important;
-        border-color: rgba(0, 0, 0, 0.1) !important;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    }}
-    
-    /* 滑桿標籤和數值 - 深色模式保持深色文字 */
-    .stApp.dark-mode .stSlider > label {{
-        color: #333333 !important;
-    }}
-    
-    .stApp.dark-mode [data-testid="stTickBarMin"],
-    .stApp.dark-mode [data-testid="stTickBarMax"] {{
-        color: #666666 !important;
-    }}
-    
-    /* 主題選擇器下拉選單 - 適配深色模式 */
-    .stApp.dark-mode .stSelectbox [data-baseweb="select"] {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        color: #E0E0E0 !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }}
-    
-    /* 下拉選單選項優化 */
-    .stApp.dark-mode .stSelectbox [data-baseweb="select"] > div {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        color: #E0E0E0 !important;
-    }}
-    
-    /* 側邊欄選擇框優化 */
-    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] {{
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    }}
-    
-    [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div {{
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-    }}
-    
-    /* 側邊欄數字輸入框優化 */
-    [data-testid="stSidebar"] .stNumberInput > div > div > input {{
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    }}
-    
-    [data-testid="stSidebar"] .stNumberInput > div > div > button {{
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-        border-color: rgba(255, 255, 255, 0.3) !important;
-    }}
-    
-    /* 數字輸入框按鈕 - 適配深色模式 */
-    .stApp.dark-mode .stNumberInput > div > div > button {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        color: #E0E0E0 !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }}
-    
-    /* 深色模式表格樣式優化 */
-    .stApp.dark-mode table {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-    }}
-    
-    .stApp.dark-mode table th,
-    .stApp.dark-mode table td {{
-        color: #E0E0E0 !important;
-        border-color: rgba(255, 255, 255, 0.1) !important;
-    }}
-    
-    /* 深色模式 plotly 圖表背景優化 */
-    .stApp.dark-mode .stPlotlyChart {{
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 12px;
-        padding: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }}
-    
-    /* 深色模式地圖容器優化 */
-    .stApp.dark-mode .folium-map {{
-        border-radius: 12px !important;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
-    }}
-    
-    /* 深色模式 expander 標題優化 */
-    .stApp.dark-mode .streamlit-expanderHeader {{
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    }}
-    
-    /* 深色模式 spinner 優化 */
-    .stApp.dark-mode .stSpinner > div {{
-        border-color: {colors['primary']} transparent {colors['primary']} transparent !important;
-    }}
-    
-    /* 深色模式文字對比度微調 */
-    .stApp.dark-mode .stMarkdown p {{
-        color: #D0D0D0 !important;
-    }}
-    
-    .stApp.dark-mode .stMarkdown strong {{
-        color: #F0F0F0 !important;
-    }}
-    
-    /* 深色模式下載按鈕樣式 */
-    .stApp.dark-mode .stDownloadButton > button {{
-        background: linear-gradient(135deg, {colors['secondary']} 0%, {colors['primary']} 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.6rem 1.2rem;
-        font-weight: 600;
-    }}
-    
-    /* 深色模式側邊欄分隔線 */
-    [data-testid="stSidebar"] hr {{
-        border-color: rgba(255, 255, 255, 0.2) !important;
-        margin: 1.5rem 0;
-    }}
-    
-    /* 主題選擇器下拉選單 - 深色模式保持白色背景 */
-    .stApp.dark-mode .stSelectbox [data-baseweb="select"] {{
         background-color: white !important;
-        color: #333333 !important;
-        border-color: #C0C0C0 !important;
-        box-shadow: 0 1px 6px rgba(0,0,0,0.1) !important;
     }}
     
-    /* 下拉選單選項優化 */
-    .stApp.dark-mode .stSelectbox [data-baseweb="select"] > div {{
+    /* 成功/資訊/警告/錯誤訊息 */
+    .stSuccess,
+    .stInfo,
+    .stWarning,
+    .stError {{
         background-color: white !important;
         color: #333333 !important;
     }}
     
-    /* 數字輸入框按鈕 - 深色模式保持白色背景 */
-    .stApp.dark-mode .stNumberInput > div > div > button {{
+    /* Caption 文字 */
+    .stCaption {{
+        color: #666666 !important;
+    }}
+    
+    /* 滑桿 */
+    .stSlider > div > div > div > div {{
+        background-color: {colors['primary']} !important;
+    }}
+    
+    .stSlider > label {{
+        color: #333333 !important;
+    }}
+    
+    [data-testid="stTickBarMin"],
+    [data-testid="stTickBarMax"] {{
+        color: #666666 !important;
+    }}
+    
+    /* 強制所有文字為統一顏色 */
+    .stMarkdown p,
+    .stMarkdown div,
+    .stMarkdown span,
+    [data-testid="stText"],
+    .element-container p,
+    .element-container div {{
+        color: #333333 !important;
+    }}
+    
+    /* 數據表格樣式 */
+    .stDataFrame [data-testid="stTable"] {{
+        background-color: white !important;
+        color: #333333 !important;
+    }}
+    
+    .stDataFrame [data-testid="stTable"] th {{
+        background-color: #F8F9FA !important;
+        color: #333333 !important;
+    }}
+    
+    .stDataFrame [data-testid="stTable"] td {{
+        background-color: white !important;
+        color: #333333 !important;
+    }}
+    
+    /* 展開器內容 */
+    .streamlit-expanderContent {{
+        background-color: #F5F5F5 !important;
+        border-color: #E0E0E0 !important;
+    }}
+    
+    /* Plotly 圖表背景 */
+    .js-plotly-plot .plotly {{
+        background-color: white !important;
+    }}
+    
+    /* 選擇框下拉選單 */
+    .stSelectbox [data-baseweb="select"] {{
+        background-color: white !important;
+        color: #333333 !important;
+        border-color: #E0E0E0 !important;
+    }}
+    
+    /* 數字輸入框按鈕 */
+    .stNumberInput > div > div > button {{
         background-color: #F5F5F5 !important;
         color: #333333 !important;
-        border-color: #C0C0C0 !important;
+        border-color: #E0E0E0 !important;
     }}
     
-    /* 深色模式 plotly 圖表背景優化 */
-    .stApp.dark-mode .stPlotlyChart {{
-        background-color: white !important;
-        border-radius: 12px;
-        padding: 1rem;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    /* 強制覆蓋所有可能的深色模式樣式 */
+    * {{
+        color-scheme: light !important;
     }}
     
-    /* 深色模式地圖容器優化 */
-    .stApp.dark-mode .folium-map {{
-        border-radius: 12px !important;
-        overflow: hidden;
-        border: 1px solid rgba(0, 0, 0, 0.1) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
-    }}
-    
-    /* 深色模式文字對比度微調 */
-    .stApp.dark-mode .stMarkdown p {{
-        color: #333333 !important;
-    }}
-    
-    .stApp.dark-mode .stMarkdown strong {{
-        color: #222222 !important;
-    }}
-    
-    /* 深色模式下載按鈕樣式 */
-    .stApp.dark-mode .stDownloadButton > button {{
-        background: linear-gradient(135deg, {colors['secondary']} 0%, {colors['primary']} 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.6rem 1.2rem;
-        font-weight: 600;
+    /* 確保所有背景都是淺色 */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    .main .block-container {{
+        background-color: #F5F5F5 !important;
     }}
 </style>
 """
@@ -801,67 +415,35 @@ def check_login():
     return st.session_state.logged_in
 
 def login_page():
-    """登入頁面 - 適配深色模式"""
+    """登入頁面 - 統一樣式"""
     st.markdown(f"""
-    {get_dark_mode_detection_css()}
     <style>
         .stApp {{
-            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
-            transition: all 0.3s ease;
-        }}
-        
-        .stApp.dark-mode {{
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%) !important;
         }}
         
         .login-container {{
             max-width: 450px;
             margin: 80px auto;
             padding: 3rem;
+            background: white !important;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }}
-        
-        .stApp.light-mode .login-container {{
-            background: white;
-        }}
-        
-        .stApp.dark-mode .login-container {{
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }}
         
         .login-title {{
             text-align: center;
+            color: #2C3E50 !important;
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            transition: color 0.3s ease;
-        }}
-        
-        .stApp.light-mode .login-title {{
-            color: #2C3E50;
-        }}
-        
-        .stApp.dark-mode .login-title {{
-            color: #E0E0E0;
         }}
         
         .login-subtitle {{
             text-align: center;
+            color: #7F8C8D !important;
             font-size: 1rem;
             margin-bottom: 2rem;
-            transition: color 0.3s ease;
-        }}
-        
-        .stApp.light-mode .login-subtitle {{
-            color: #7F8C8D;
-        }}
-        
-        .stApp.dark-mode .login-subtitle {{
-            color: #B0B0B0;
         }}
         
         .login-icon {{
@@ -870,34 +452,16 @@ def login_page():
             margin-bottom: 1rem;
         }}
         
-        /* 登入頁面輸入框樣式優化 */
+        /* 登入頁面輸入框樣式 */
         .stTextInput > div > div > input {{
-            border: 2px solid #E0E0E0 !important;
-            font-size: 1rem !important;
-            transition: all 0.3s ease !important;
-        }}
-        
-        .stApp.light-mode .stTextInput > div > div > input {{
             background-color: #F8F9FA !important;
             color: #2C3E50 !important;
-        }}
-        
-        .stApp.dark-mode .stTextInput > div > div > input {{
-            background-color: rgba(255, 255, 255, 0.08) !important;
-            color: #E0E0E0 !important;
-            border-color: rgba(255, 255, 255, 0.2) !important;
+            border: 2px solid #E0E0E0 !important;
+            font-size: 1rem !important;
         }}
         
         .stTextInput > div > div > input::placeholder {{
-            transition: color 0.3s ease;
-        }}
-        
-        .stApp.light-mode .stTextInput > div > div > input::placeholder {{
             color: #95A5A6 !important;
-        }}
-        
-        .stApp.dark-mode .stTextInput > div > div > input::placeholder {{
-            color: #888888 !important;
         }}
         
         .stTextInput > div > div > input:focus {{
@@ -907,17 +471,9 @@ def login_page():
         
         /* 登入頁面標籤文字 */
         .stTextInput > label {{
+            color: #2C3E50 !important;
             font-weight: 600 !important;
             font-size: 0.95rem !important;
-            transition: color 0.3s ease;
-        }}
-        
-        .stApp.light-mode .stTextInput > label {{
-            color: #2C3E50 !important;
-        }}
-        
-        .stApp.dark-mode .stTextInput > label {{
-            color: #E0E0E0 !important;
         }}
     </style>
     """, unsafe_allow_html=True)
