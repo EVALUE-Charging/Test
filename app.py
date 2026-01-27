@@ -706,7 +706,8 @@ def load_station_data():
             '站ID': 'station_id', '名稱': 'name', '經度': 'longitude', '緯度': 'latitude',
             '充電槍數': 'charger_count', '啟用日期': 'installation_date', '負責人': 'manager',
             '站點規格': 'station_type', 'AC槍數量': 'ac_count', 'DC槍數量': 'dc_count',
-            '槍頭規格': 'connector_type', '區域屬性': 'area_type', '站點屬性': 'location_type'
+            '槍頭規格': 'connector_type', '區域屬性': 'area_type', '站點屬性': 'location_type',
+            '縣市': 'city', '標案性質': 'project_type'
         }
         
         df = df.rename(columns=column_mapping)
@@ -906,6 +907,10 @@ def create_map(center_lat, center_lon, _nearby_stations, target_address, radius_
             popup_parts.append(f"區域: {station['area_type']}")
         if 'location_type' in station and pd.notna(station['location_type']):
             popup_parts.append(f"類型: {station['location_type']}")
+        if 'city' in station and pd.notna(station['city']):
+            popup_parts.append(f"縣市: {station['city']}")
+        if 'project_type' in station and pd.notna(station['project_type']):
+            popup_parts.append(f"標案性質: {station['project_type']}")
         
         popup_html = f"<div style='width:200px'>{'<br>'.join(popup_parts)}</div>"
         
@@ -1018,6 +1023,8 @@ def main():
     dc_capacity = st.session_state.dc_capacity
     selected_area = '全部'
     selected_location = '全部'
+    selected_city = '全部'
+    selected_project = '全部'
     search_button = False
     
     # 側邊欄內容 - 只在拓點評估時顯示
@@ -1062,6 +1069,7 @@ def main():
             st.markdown("---")
             st.markdown("### 🎯 進階篩選條件")
             
+            # 現有的區域屬性和站點屬性
             if 'area_type' in stations_df.columns:
                 area_types = ['全部'] + sorted(stations_df['area_type'].dropna().unique().tolist())
                 selected_area = st.selectbox("區域屬性", options=area_types)
@@ -1073,6 +1081,20 @@ def main():
                 selected_location = st.selectbox("站點屬性", options=location_types)
             else:
                 selected_location = '全部'
+            
+            # 新增縣市篩選
+            if 'city' in stations_df.columns:
+                cities = ['全部'] + sorted(stations_df['city'].dropna().unique().tolist())
+                selected_city = st.selectbox("縣市", options=cities)
+            else:
+                selected_city = '全部'
+            
+            # 新增標案性質篩選
+            if 'project_type' in stations_df.columns:
+                project_types = ['全部'] + sorted(stations_df['project_type'].dropna().unique().tolist())
+                selected_project = st.selectbox("標案性質", options=project_types)
+            else:
+                selected_project = '全部'
             
             st.markdown("---")
             search_button = st.button("🔍 開始評估", type="primary", use_container_width=True)
@@ -1106,6 +1128,8 @@ def main():
                 st.session_state.search_radius = search_radius
                 st.session_state.selected_area = selected_area
                 st.session_state.selected_location = selected_location
+                st.session_state.selected_city = selected_city
+                st.session_state.selected_project = selected_project
         
         if st.session_state.get('search_executed', False):
             lat = st.session_state.search_lat
@@ -1113,14 +1137,21 @@ def main():
             search_radius = st.session_state.search_radius
             selected_area = st.session_state.get('selected_area', '全部')
             selected_location = st.session_state.get('selected_location', '全部')
+            selected_city = st.session_state.get('selected_city', '全部')
+            selected_project = st.session_state.get('selected_project', '全部')
             
             with st.spinner("🔄 正在分析地點..."):
                 nearby = find_nearby_stations(lat, lon, stations_df, search_radius)
                 
+                # 應用篩選條件
                 if selected_area != '全部' and 'area_type' in nearby.columns:
                     nearby = nearby[nearby['area_type'] == selected_area]
                 if selected_location != '全部' and 'location_type' in nearby.columns:
                     nearby = nearby[nearby['location_type'] == selected_location]
+                if selected_city != '全部' and 'city' in nearby.columns:
+                    nearby = nearby[nearby['city'] == selected_city]
+                if selected_project != '全部' and 'project_type' in nearby.columns:
+                    nearby = nearby[nearby['project_type'] == selected_project]
                 
                 st.session_state.nearby_stations = nearby
             
@@ -1204,11 +1235,15 @@ def main():
                         with info_col1:
                             st.markdown(f"**站點 ID**  \n`{station_info['station_id']}`")
                             st.markdown(f"**距離**  \n🚗 {station_info['distance_km']:.2f} km")
+                            if 'city' in station_info and pd.notna(station_info['city']):
+                                st.markdown(f"**縣市**  \n🏙️ {station_info['city']}")
                         with info_col2:
                             if 'ac_count' in station_info:
                                 st.markdown(f"**AC 槍數**  \n⚡ {int(station_info['ac_count'])}")
                             if 'dc_count' in station_info:
                                 st.markdown(f"**DC 槍數**  \n⚡ {int(station_info['dc_count'])}")
+                            if 'project_type' in station_info and pd.notna(station_info['project_type']):
+                                st.markdown(f"**標案性質**  \n📋 {station_info['project_type']}")
                         
                         if not utilization_df.empty:
                             station_util = utilization_df[utilization_df['Station'] == selected_id]
@@ -1413,7 +1448,7 @@ def main():
         
         st.subheader("🎯 通路篩選條件")
         
-        filter_row1 = st.columns([3, 3])
+        filter_row1 = st.columns([2, 2, 2, 2])
         
         with filter_row1[0]:
             if 'area_type' in stations_df.columns:
@@ -1428,6 +1463,20 @@ def main():
                 filter_location = st.selectbox("站點屬性", options=location_types_all, key="filter_location")
             else:
                 filter_location = '全部'
+        
+        with filter_row1[2]:
+            if 'city' in stations_df.columns:
+                cities_all = ['全部'] + sorted(stations_df['city'].dropna().unique().tolist())
+                filter_city = st.selectbox("縣市", options=cities_all, key="filter_city")
+            else:
+                filter_city = '全部'
+        
+        with filter_row1[3]:
+            if 'project_type' in stations_df.columns:
+                project_types_all = ['全部'] + sorted(stations_df['project_type'].dropna().unique().tolist())
+                filter_project = st.selectbox("標案性質", options=project_types_all, key="filter_project")
+            else:
+                filter_project = '全部'
         
         st.markdown("---")
         
@@ -1468,25 +1517,40 @@ def main():
                 else:
                     filtered_stations = stations_df.copy()
                     
+                    # 應用通路篩選條件
                     if filter_area != '全部' and 'area_type' in filtered_stations.columns:
                         filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
                     if filter_location != '全部' and 'location_type' in filtered_stations.columns:
                         filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+                    if filter_city != '全部' and 'city' in filtered_stations.columns:
+                        filtered_stations = filtered_stations[filtered_stations['city'] == filter_city]
+                    if filter_project != '全部' and 'project_type' in filtered_stations.columns:
+                        filtered_stations = filtered_stations[filtered_stations['project_type'] == filter_project]
             else:
                 st.warning(f"⚠️ 找不到包含「{station_name_search}」的站點")
                 filtered_stations = stations_df.copy()
                 
+                # 應用通路篩選條件
                 if filter_area != '全部' and 'area_type' in filtered_stations.columns:
                     filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
                 if filter_location != '全部' and 'location_type' in filtered_stations.columns:
                     filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+                if filter_city != '全部' and 'city' in filtered_stations.columns:
+                    filtered_stations = filtered_stations[filtered_stations['city'] == filter_city]
+                if filter_project != '全部' and 'project_type' in filtered_stations.columns:
+                    filtered_stations = filtered_stations[filtered_stations['project_type'] == filter_project]
         else:
             filtered_stations = stations_df.copy()
             
+            # 應用通路篩選條件
             if filter_area != '全部' and 'area_type' in filtered_stations.columns:
                 filtered_stations = filtered_stations[filtered_stations['area_type'] == filter_area]
             if filter_location != '全部' and 'location_type' in filtered_stations.columns:
                 filtered_stations = filtered_stations[filtered_stations['location_type'] == filter_location]
+            if filter_city != '全部' and 'city' in filtered_stations.columns:
+                filtered_stations = filtered_stations[filtered_stations['city'] == filter_city]
+            if filter_project != '全部' and 'project_type' in filtered_stations.columns:
+                filtered_stations = filtered_stations[filtered_stations['project_type'] == filter_project]
         
         filtered_station_ids = filtered_stations['station_id'].tolist()
         
@@ -1702,11 +1766,24 @@ def main():
             
             download_data = download_data[export_cols]
             
+            # 建立檔案名稱
+            filter_parts = []
+            if filter_area != '全部':
+                filter_parts.append(filter_area)
+            if filter_location != '全部':
+                filter_parts.append(filter_location)
+            if filter_city != '全部':
+                filter_parts.append(filter_city)
+            if filter_project != '全部':
+                filter_parts.append(filter_project)
+            
+            filename_suffix = '_'.join(filter_parts) if filter_parts else '全部'
+            
             csv = download_data.to_csv(index=False, encoding='utf-8-sig')
             st.download_button(
                 label="📥 下載數據 (CSV)",
                 data=csv,
-                file_name=f"稼動率分析_{filter_area}_{filter_location}.csv",
+                file_name=f"稼動率分析_{filename_suffix}.csv",
                 mime="text/csv"
             )
 
