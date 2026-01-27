@@ -752,146 +752,6 @@ def load_usage_data():
         return pd.DataFrame()
 
 @st.cache_data
-def load_car_data():
-    """載入汽車登記數據"""
-    try:
-        # 嘗試不同的檔案名稱
-        possible_files = ['data/car.csv', 'data/CAR.csv', 'car.csv', 'CAR.csv']
-        df = None
-        loaded_file = None
-        
-        for filepath in possible_files:
-            for encoding in ['utf-8', 'utf-8-sig', 'big5', 'gbk', 'cp950']:
-                try:
-                    df = pd.read_csv(filepath, encoding=encoding)
-                    loaded_file = filepath
-                    print(f"成功載入檔案: {filepath}, 編碼: {encoding}")
-                    break
-                except (FileNotFoundError, UnicodeDecodeError):
-                    continue
-            if df is not None:
-                break
-        
-        if df is None:
-            print("未找到汽車登記資料檔案")
-            return pd.DataFrame()
-        
-        print(f"原始資料形狀: {df.shape}")
-        print(f"欄位名稱: {df.columns.tolist()}")
-        print(f"前幾行資料:\n{df.head()}")
-        
-        # 處理欄位名稱 - 更靈活的匹配
-        if len(df.columns) >= 2:
-            # 找到包含「區域」、「地區」、「縣市」等的欄位作為地區欄
-            region_col = None
-            count_col = None
-            
-            for col in df.columns:
-                if any(keyword in str(col) for keyword in ['區域', '地區', '縣市', '行政區']):
-                    region_col = col
-                elif any(keyword in str(col) for keyword in ['114', '車輛', '登記', '總計', '數量']):
-                    count_col = col
-            
-            # 如果沒找到特定欄位，就用前兩個欄位
-            if region_col is None:
-                region_col = df.columns[0]
-            if count_col is None:
-                count_col = df.columns[1]
-            
-            print(f"使用欄位 - 區域: {region_col}, 數量: {count_col}")
-            
-            # 重新命名欄位
-            df = df.rename(columns={region_col: 'region', count_col: 'car_count'})
-        else:
-            print("欄位數量不足")
-            return pd.DataFrame()
-        
-        # 轉換數值並處理缺失值
-        df['car_count'] = pd.to_numeric(df['car_count'], errors='coerce')
-        df = df.dropna(subset=['car_count'])
-        
-        # 移除總計行和無效資料
-        df = df[~df['region'].isin(['總計', '合計', 'total', 'Total'])]
-        df = df[df['car_count'] > 0]
-        
-        print(f"清理後資料形狀: {df.shape}")
-        
-        # 判斷是否為縣市層級
-        county_keywords = ['縣', '市']
-        district_keywords = ['區', '鄉', '鎮']
-        
-        def classify_region_type(region):
-            region_str = str(region)
-            if any(region_str.endswith(keyword) for keyword in county_keywords):
-                return 'county'
-            elif any(keyword in region_str for keyword in district_keywords):
-                return 'district'
-            else:
-                return 'other'
-        
-        df['region_type'] = df['region'].apply(classify_region_type)
-        
-        # 提取縣市名稱
-        def extract_county(region):
-            region_str = str(region)
-            for keyword in ['市', '縣']:
-                if keyword in region_str:
-                    return region_str.split(keyword)[0] + keyword
-            return region_str
-        
-        df['county'] = df['region'].apply(extract_county)
-        
-        county_count = len(df[df['region_type'] == 'county'])
-        district_count = len(df[df['region_type'] == 'district'])
-        print(f"縣市數量: {county_count}, 區鄉鎮數量: {district_count}")
-        
-        return df
-        
-    except Exception as e:
-        print(f"載入汽車登記資料時發生錯誤: {str(e)}")
-        return pd.DataFrame()
-
-@st.cache_data
-def get_car_statistics_for_region(car_df, target_city=None, nearby_stations=None):
-    """計算指定區域的汽車統計資料"""
-    if car_df.empty:
-        return {}
-    
-    stats = {}
-    
-    # 如果指定了城市，計算該城市的統計
-    if target_city:
-        city_data = car_df[car_df['county'] == target_city]
-        if not city_data.empty:
-            # 該縣市總車輛數
-            county_total = city_data[city_data['region_type'] == 'county']['car_count'].sum()
-            # 該縣市各區車輛數
-            district_data = city_data[city_data['region_type'] == 'district']
-            
-            stats['target_city'] = target_city
-            stats['county_total'] = int(county_total) if county_total > 0 else 0
-            stats['districts'] = district_data[['region', 'car_count']].to_dict('records') if not district_data.empty else []
-    
-    # 如果有附近站點資料，計算這些站點所在區域的車輛密度
-    if nearby_stations is not None and not nearby_stations.empty and 'city' in nearby_stations.columns:
-        nearby_cities = nearby_stations['city'].dropna().unique()
-        nearby_stats = []
-        
-        for city in nearby_cities:
-            city_data = car_df[car_df['county'] == city]
-            if not city_data.empty:
-                county_total = city_data[city_data['region_type'] == 'county']['car_count'].sum()
-                nearby_stats.append({
-                    'city': city,
-                    'car_count': int(county_total) if county_total > 0 else 0,
-                    'station_count': len(nearby_stations[nearby_stations['city'] == city])
-                })
-        
-        stats['nearby_cities'] = sorted(nearby_stats, key=lambda x: x['car_count'], reverse=True)
-    
-    return stats
-
-@st.cache_data
 def calculate_utilization_rate(_stations_df, _usage_df, ac_capacity=7, dc_capacity=30):
     if _usage_df.empty or _stations_df.empty:
         return pd.DataFrame()
@@ -1117,7 +977,6 @@ def main():
     # 載入資料（在分頁選擇之前）
     stations_df = load_station_data()
     usage_df = load_usage_data()
-    car_df = load_car_data()
     
     if stations_df.empty:
         st.warning("無充電站資料")
@@ -1239,33 +1098,6 @@ def main():
             
             st.markdown("---")
             search_button = st.button("🔍 開始評估", type="primary", use_container_width=True)
-            
-            # 汽車登記數據統計
-            if not car_df.empty:
-                st.markdown("---")
-                st.markdown("### 🚗 汽車登記數據參考")
-                
-                # 顯示載入成功資訊
-                total_counties = len(car_df[car_df['region_type'] == 'county'])
-                total_districts = len(car_df[car_df['region_type'] == 'district'])
-                st.success(f"✅ 汽車資料載入成功！({total_counties} 個縣市, {total_districts} 個區鄉鎮)")
-                
-                # 顯示全國前5大縣市
-                county_data = car_df[car_df['region_type'] == 'county'].nlargest(5, 'car_count')
-                if not county_data.empty:
-                    st.markdown("**全國汽車登記前5名：**")
-                    for _, row in county_data.iterrows():
-                        st.caption(f"• {row['region']}: {row['car_count']:,} 輛")
-                
-                # 顯示數據說明
-                total_cars = car_df[car_df['region_type'] == 'county']['car_count'].sum()
-                st.caption(f"全國總計：{total_cars:,} 輛 (114年底)")
-                st.caption("💡 汽車密度高的區域通常具有更大的電動車發展潜力")
-            else:
-                st.markdown("---")
-                st.markdown("### 🚗 汽車登記數據參考")
-                st.error("❌ 未載入汽車登記資料")
-                st.caption("請確認 car.csv 檔案是否存在於正確位置")
     else:
         # 平均稼動率分頁 - 側邊欄顯示簡單訊息
         with st.sidebar:
@@ -1327,7 +1159,6 @@ def main():
             st.caption(f"座標：{lat:.4f}, {lon:.4f} | 搜尋半徑：{search_radius} km")
             st.caption(f"⚙️ 計算參數：AC={st.session_state.ac_capacity}度/次 | DC={st.session_state.dc_capacity}度/次")
             
-            # 基本站點統計
             metric_col1, metric_col2, metric_col3 = st.columns(3)
             
             with metric_col1:
@@ -1343,121 +1174,6 @@ def main():
                 if 'dc_count' in nearby.columns:
                     total_dc = int(nearby['dc_count'].sum()) if len(nearby) > 0 else 0
                     st.metric("DC 槍數", total_dc, delta="快充", delta_color="off")
-            
-            # 汽車登記數據分析
-            if not car_df.empty:
-                st.markdown("---")
-                st.subheader("🚗 區域汽車登記數據分析")
-                st.caption("基於114年底汽車登記數據，作為電動車潛在需求參考")
-                
-                # 計算汽車統計資料
-                car_stats = get_car_statistics_for_region(car_df, nearby_stations=nearby)
-                
-                if car_stats.get('nearby_cities'):
-                    car_metric_cols = st.columns(min(4, len(car_stats['nearby_cities'])))
-                    
-                    for i, city_stat in enumerate(car_stats['nearby_cities'][:4]):  # 只顯示前4個
-                        with car_metric_cols[i]:
-                            # 計算每站服務車輛數
-                            cars_per_station = city_stat['car_count'] // city_stat['station_count'] if city_stat['station_count'] > 0 else city_stat['car_count']
-                            
-                            st.metric(
-                                f"{city_stat['city']} 汽車數",
-                                f"{city_stat['car_count']:,}",
-                                delta=f"站點: {city_stat['station_count']} | 車/站: {cars_per_station:,}",
-                                help=f"該縣市總車輛數及充電站密度"
-                            )
-                    
-                    # 詳細汽車登記資料表
-                    with st.expander("📋 查看詳細汽車登記分析", expanded=False):
-                        car_analysis_df = pd.DataFrame(car_stats['nearby_cities'])
-                        car_analysis_df['cars_per_station'] = car_analysis_df.apply(
-                            lambda row: row['car_count'] // row['station_count'] if row['station_count'] > 0 else row['car_count'], 
-                            axis=1
-                        )
-                        car_analysis_df['market_potential'] = car_analysis_df['car_count'] * 0.1  # 假設10%為電動車潛在市場
-                        
-                        # 重新命名欄位供顯示
-                        display_car_df = car_analysis_df.rename(columns={
-                            'city': '縣市',
-                            'car_count': '汽車登記數',
-                            'station_count': '充電站數',
-                            'cars_per_station': '每站服務車輛',
-                            'market_potential': '潛在電動車市場'
-                        })
-                        
-                        # 格式化數值
-                        display_car_df['汽車登記數'] = display_car_df['汽車登記數'].apply(lambda x: f"{x:,}")
-                        display_car_df['每站服務車輛'] = display_car_df['每站服務車輛'].apply(lambda x: f"{x:,}")
-                        display_car_df['潛在電動車市場'] = display_car_df['潛在電動車市場'].apply(lambda x: f"{x:,.0f}")
-                        
-                        st.dataframe(display_car_df, use_container_width=True, hide_index=True)
-                        
-                        # 市場分析建議
-                        if len(car_stats['nearby_cities']) > 0:
-                            highest_car_city = max(car_stats['nearby_cities'], key=lambda x: x['car_count'])
-                            lowest_density = min(car_stats['nearby_cities'], key=lambda x: x['car_count'] // x['station_count'] if x['station_count'] > 0 else float('inf'))
-                            
-                            st.markdown("#### 💡 市場分析建議")
-                            
-                            analysis_col1, analysis_col2 = st.columns(2)
-                            with analysis_col1:
-                                st.markdown(f"""
-                                **🎯 最大潛在市場**
-                                - **{highest_car_city['city']}** 擁有最多汽車登記數 ({highest_car_city['car_count']:,} 輛)
-                                - 潛在電動車市場約 {highest_car_city['car_count'] * 0.1:,.0f} 輛
-                                - 建議優先考慮在此區域增設充電站
-                                """)
-                            
-                            with analysis_col2:
-                                if lowest_density['station_count'] > 0:
-                                    cars_per_station = lowest_density['car_count'] // lowest_density['station_count']
-                                    st.markdown(f"""
-                                    **⚠️ 服務密度分析**
-                                    - **{lowest_density['city']}** 每站需服務 {cars_per_station:,} 輛汽車
-                                    - 可能存在充電站供需不平衡
-                                    - 建議評估增設充電站的必要性
-                                    """)
-                else:
-                    st.info("附近站點無縣市資訊，無法進行汽車登記數據比對")
-            else:
-                # 顯示診斷資訊
-                st.markdown("---")
-                st.subheader("🚗 汽車登記資料載入狀態")
-                
-                # 檢查可能的檔案
-                import os
-                possible_files = ['data/car.csv', 'data/CAR.csv', 'car.csv', 'CAR.csv']
-                file_status = []
-                
-                for filepath in possible_files:
-                    if os.path.exists(filepath):
-                        file_status.append(f"✅ 找到檔案: {filepath}")
-                    else:
-                        file_status.append(f"❌ 未找到: {filepath}")
-                
-                st.code('\n'.join(file_status))
-                
-                # 顯示建議
-                st.markdown("""
-                **💡 載入汽車登記資料的建議：**
-                1. 確認檔案名稱為 `car.csv` 或 `CAR.csv`
-                2. 確認檔案放在 `data/` 資料夾中（如果有的話）
-                3. 確認 CSV 檔案格式：
-                   - 第一欄：區域名稱（如：新北市、臺北市等）
-                   - 第二欄：汽車登記數量
-                4. 檔案編碼建議使用 UTF-8
-                
-                **檔案範例格式：**
-                ```
-                區域,114年底
-                新北市,16535
-                臺北市,27725
-                桃園市,13608
-                ```
-                """)
-                
-                st.info("💡 若有汽車登記資料，放置後重新執行評估即可看到詳細的市場潛力分析")
             
             st.markdown("---")
             
@@ -2073,3 +1789,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
