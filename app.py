@@ -755,54 +755,100 @@ def load_usage_data():
 def load_car_data():
     """載入汽車登記數據"""
     try:
-        for encoding in ['utf-8', 'utf-8-sig', 'big5', 'gbk', 'cp950']:
-            try:
-                df = pd.read_csv('data/car.csv', encoding=encoding)
+        # 嘗試不同的檔案名稱
+        possible_files = ['data/car.csv', 'data/CAR.csv', 'car.csv', 'CAR.csv']
+        df = None
+        loaded_file = None
+        
+        for filepath in possible_files:
+            for encoding in ['utf-8', 'utf-8-sig', 'big5', 'gbk', 'cp950']:
+                try:
+                    df = pd.read_csv(filepath, encoding=encoding)
+                    loaded_file = filepath
+                    print(f"成功載入檔案: {filepath}, 編碼: {encoding}")
+                    break
+                except (FileNotFoundError, UnicodeDecodeError):
+                    continue
+            if df is not None:
                 break
-            except (FileNotFoundError, UnicodeDecodeError):
-                continue
-        else:
+        
+        if df is None:
+            print("未找到汽車登記資料檔案")
             return pd.DataFrame()
         
-        # 處理欄位名稱
-        if '區域' in df.columns and '114年底' in df.columns:
-            df = df.rename(columns={'區域': 'region', '114年底': 'car_count'})
-        elif len(df.columns) >= 2:
-            df.columns = ['region', 'car_count']
+        print(f"原始資料形狀: {df.shape}")
+        print(f"欄位名稱: {df.columns.tolist()}")
+        print(f"前幾行資料:\n{df.head()}")
+        
+        # 處理欄位名稱 - 更靈活的匹配
+        if len(df.columns) >= 2:
+            # 找到包含「區域」、「地區」、「縣市」等的欄位作為地區欄
+            region_col = None
+            count_col = None
+            
+            for col in df.columns:
+                if any(keyword in str(col) for keyword in ['區域', '地區', '縣市', '行政區']):
+                    region_col = col
+                elif any(keyword in str(col) for keyword in ['114', '車輛', '登記', '總計', '數量']):
+                    count_col = col
+            
+            # 如果沒找到特定欄位，就用前兩個欄位
+            if region_col is None:
+                region_col = df.columns[0]
+            if count_col is None:
+                count_col = df.columns[1]
+            
+            print(f"使用欄位 - 區域: {region_col}, 數量: {count_col}")
+            
+            # 重新命名欄位
+            df = df.rename(columns={region_col: 'region', count_col: 'car_count'})
+        else:
+            print("欄位數量不足")
+            return pd.DataFrame()
         
         # 轉換數值並處理缺失值
         df['car_count'] = pd.to_numeric(df['car_count'], errors='coerce')
         df = df.dropna(subset=['car_count'])
         
-        # 移除總計行
-        df = df[df['region'] != '總計']
+        # 移除總計行和無效資料
+        df = df[~df['region'].isin(['總計', '合計', 'total', 'Total'])]
+        df = df[df['car_count'] > 0]
         
-        # 判斷是否為縣市層級（不包含區、鄉、鎮、市字尾的）
+        print(f"清理後資料形狀: {df.shape}")
+        
+        # 判斷是否為縣市層級
         county_keywords = ['縣', '市']
         district_keywords = ['區', '鄉', '鎮']
         
         def classify_region_type(region):
-            if any(region.endswith(keyword) for keyword in county_keywords):
+            region_str = str(region)
+            if any(region_str.endswith(keyword) for keyword in county_keywords):
                 return 'county'
-            elif any(keyword in region for keyword in district_keywords):
+            elif any(keyword in region_str for keyword in district_keywords):
                 return 'district'
             else:
                 return 'other'
         
         df['region_type'] = df['region'].apply(classify_region_type)
         
-        # 提取縣市名稱（用於與站點資料匹配）
+        # 提取縣市名稱
         def extract_county(region):
+            region_str = str(region)
             for keyword in ['市', '縣']:
-                if keyword in region:
-                    return region.split(keyword)[0] + keyword
-            return region
+                if keyword in region_str:
+                    return region_str.split(keyword)[0] + keyword
+            return region_str
         
         df['county'] = df['region'].apply(extract_county)
         
+        county_count = len(df[df['region_type'] == 'county'])
+        district_count = len(df[df['region_type'] == 'district'])
+        print(f"縣市數量: {county_count}, 區鄉鎮數量: {district_count}")
+        
         return df
+        
     except Exception as e:
-        st.error(f"❌ 讀取汽車登記資料時發生錯誤: {str(e)}")
+        print(f"載入汽車登記資料時發生錯誤: {str(e)}")
         return pd.DataFrame()
 
 @st.cache_data
@@ -1199,6 +1245,11 @@ def main():
                 st.markdown("---")
                 st.markdown("### 🚗 汽車登記數據參考")
                 
+                # 顯示載入成功資訊
+                total_counties = len(car_df[car_df['region_type'] == 'county'])
+                total_districts = len(car_df[car_df['region_type'] == 'district'])
+                st.success(f"✅ 汽車資料載入成功！({total_counties} 個縣市, {total_districts} 個區鄉鎮)")
+                
                 # 顯示全國前5大縣市
                 county_data = car_df[car_df['region_type'] == 'county'].nlargest(5, 'car_count')
                 if not county_data.empty:
@@ -1209,7 +1260,12 @@ def main():
                 # 顯示數據說明
                 total_cars = car_df[car_df['region_type'] == 'county']['car_count'].sum()
                 st.caption(f"全國總計：{total_cars:,} 輛 (114年底)")
-                st.caption("💡 汽車密度高的區域通常具有更大的電動車發展潛力")
+                st.caption("💡 汽車密度高的區域通常具有更大的電動車發展潜力")
+            else:
+                st.markdown("---")
+                st.markdown("### 🚗 汽車登記數據參考")
+                st.error("❌ 未載入汽車登記資料")
+                st.caption("請確認 car.csv 檔案是否存在於正確位置")
     else:
         # 平均稼動率分頁 - 側邊欄顯示簡單訊息
         with st.sidebar:
@@ -1365,7 +1421,43 @@ def main():
                 else:
                     st.info("附近站點無縣市資訊，無法進行汽車登記數據比對")
             else:
-                st.info("💡 若有汽車登記資料(car.csv)，可提供更詳細的市場潛力分析")
+                # 顯示診斷資訊
+                st.markdown("---")
+                st.subheader("🚗 汽車登記資料載入狀態")
+                
+                # 檢查可能的檔案
+                import os
+                possible_files = ['data/car.csv', 'data/CAR.csv', 'car.csv', 'CAR.csv']
+                file_status = []
+                
+                for filepath in possible_files:
+                    if os.path.exists(filepath):
+                        file_status.append(f"✅ 找到檔案: {filepath}")
+                    else:
+                        file_status.append(f"❌ 未找到: {filepath}")
+                
+                st.code('\n'.join(file_status))
+                
+                # 顯示建議
+                st.markdown("""
+                **💡 載入汽車登記資料的建議：**
+                1. 確認檔案名稱為 `car.csv` 或 `CAR.csv`
+                2. 確認檔案放在 `data/` 資料夾中（如果有的話）
+                3. 確認 CSV 檔案格式：
+                   - 第一欄：區域名稱（如：新北市、臺北市等）
+                   - 第二欄：汽車登記數量
+                4. 檔案編碼建議使用 UTF-8
+                
+                **檔案範例格式：**
+                ```
+                區域,114年底
+                新北市,16535
+                臺北市,27725
+                桃園市,13608
+                ```
+                """)
+                
+                st.info("💡 若有汽車登記資料，放置後重新執行評估即可看到詳細的市場潛力分析")
             
             st.markdown("---")
             
